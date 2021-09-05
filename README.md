@@ -1,14 +1,14 @@
 <div align="center" id="top"> 
-  <img src="./.github/app.gif" alt="Hlu_api" />
+<!--   <img src="./.github/app.gif" alt="Hlu_api" /> -->
 
-&#xa0;
+<!-- &#xa0; -->
 
-  <!-- <a href="https://hlu_api.netlify.app">Demo</a> -->
+<!-- <a href="https://hlu_api.netlify.app">Demo</a> -->
 </div>
 
 <h1 align="center">Hlu_api</h1>
 
-<p align="center">
+<!-- <p align="center">
   <img alt="Github top language" src="https://img.shields.io/github/languages/top/{{TMinh25}}/hlu_api?color=56BEB8">
 
   <img alt="Github language count" src="https://img.shields.io/github/languages/count/{{TMinh25}}/hlu_api?color=56BEB8">
@@ -16,7 +16,7 @@
   <img alt="Repository size" src="https://img.shields.io/github/repo-size/{{TMinh25}}/hlu_api?color=56BEB8">
 
   <img alt="License" src="https://img.shields.io/github/license/{{TMinh25}}/hlu_api?color=56BEB8">
-</p>
+</p> -->
 
 Status
 
@@ -56,7 +56,7 @@ $ yarn dev
 # The server will initialize in the <http://localhost:3000>
 ```
 
-Made with :heart: by <a href="https://github.com/{{TMinh25}}" target="_blank">{{Nguyễn Trường Minh}}</a>
+Made with :heart: by <a href="https://github.com/{{TMinh25}}" target="_blank">Nguyễn Trường Minh</a>
 
 &#xa0;
 
