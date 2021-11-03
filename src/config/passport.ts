@@ -1,6 +1,6 @@
 import passport from 'passport';
 import passportJwt from 'passport-jwt';
-import Student from '../models/student.model';
+import User from '../models/user.model';
 import config from './config';
 
 let JwtStrategy = passportJwt.Strategy;
@@ -14,7 +14,7 @@ module.exports = () => {
 
 	passport.use(
 		new JwtStrategy(options, (payload, done) => {
-			Student.find(
+			User.find(
 				{
 					_id: payload._id
 				},

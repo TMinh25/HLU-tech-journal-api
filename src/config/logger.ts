@@ -1,5 +1,4 @@
 // should log timestamp on production enviroment
-
 // const getTimeStamp = (): string => {
 // 	return new Date().toISOString();
 // };

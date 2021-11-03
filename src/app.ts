@@ -3,11 +3,11 @@ import express from 'express';
 import morgan from 'morgan';
 import cors from 'cors';
 import passport from 'passport';
-import logging from './config/logging';
+import logging from './config/logger';
 import config from './config/config';
 import mongoose from 'mongoose';
-import studentRoutes from './routes/student';
-import teacherRoutes from './routes/teacher';
+import userRoutes from './routes/user.routes';
+import authRoutes from './routes/auth.routes';
 
 const NAMESPACE = 'Server';
 const app = express();
@@ -21,9 +21,10 @@ mongoose
 		process.exit(1);
 	});
 
-// if (process.env.NODE_ENV === 'development') {
-// 	app.use(morgan('dev'));
-// }
+if (process.env.NODE_ENV === 'development') {
+	app.use(morgan('dev'));
+	mongoose.set('debug', true);
+}
 
 // Logging the request
 app.use((req, res, next) => {
@@ -39,21 +40,21 @@ app.use((req, res, next) => {
 // Parse the request
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
+var corsOptions = {
+	origin: '*',
+	optionsSuccessStatus: 200
+};
 app.use(cors());
+app.use(passport.initialize());
 
 // Routes
-app.use('/student', studentRoutes);
-app.use('/teacher', teacherRoutes);
-app.use('/', (req, res) => {
-	res.status(200).json({
-		count: 1
-	});
-});
+app.use('/user', userRoutes);
+app.use('/auth', authRoutes);
 
 // Rules of API
 app.use((req, res, next) => {
 	res.header('Access-Control-Allow-Origin', '*');
-	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+	// res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
 
 	if (req.method == 'OPTIONS') {
 		res.header('Access-Control-Allow-Methods', 'GET PATCH DELETE POST PUT');
@@ -74,4 +75,4 @@ app.use((req, res, next) => {
 
 // Create the server
 const httpServer = http.createServer(app);
-httpServer.listen(config.server.port, () => logging.info(NAMESPACE, `Server running on ${config.server.hostname}: ${config.server.port}`));
+httpServer.listen(config.server.port, () => logging.info(NAMESPACE, `Server running on ${config.server.hostname}:${config.server.port}`));
