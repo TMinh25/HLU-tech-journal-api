@@ -65,11 +65,8 @@ This is an API for my final year project at Ha Long University
 The following tools were used in this project:
 
 - [TypeScript](https://www.typescriptlang.org/)
-<<<<<<< HEAD
-=======
 - [Express](https://expressjs.com/)
 - [MongoDB](https://www.mongodb.com/)
->>>>>>> 010a4fa2bb4d3878755ca2f6bfaf568d327d569c
 
 ## :white_check_mark: Requirements
 
@@ -79,7 +76,7 @@ Before starting :checkered_flag:, you need to have [Git](https://git-scm.com) an
 
 ```bash
 # Clone this project
-$ git clone https://github.com/{{TMinh25}}/hlu_api
+$ git clone https://github.com/TMinh25/hlu_api
 
 # Access
 $ cd hlu_api
@@ -87,17 +84,13 @@ $ cd hlu_api
 # Install dependencies
 $ yarn
 
-<<<<<<< HEAD
-# Run the API
-=======
-# Run the project
->>>>>>> 010a4fa2bb4d3878755ca2f6bfaf568d327d569c
+# Run the API in local
 $ yarn start
 
 # The server will initialize in the <http://localhost:3000>
 ```
 
-Made with :heart: by <a href="https://github.com/{{TMinh25}}" target="_blank">Nguyễn Trường Minh</a>
+Made with :heart: by <a href="https://github.com/TMinh25" target="_blank">Nguyễn Trường Minh</a>
 
 &#xa0;
 
