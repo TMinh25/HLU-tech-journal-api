@@ -1,0 +1,55 @@
+{
+  "_id": "61610ed484d2094e34913045",
+  "classID": "61610ed484d2094e34913045",
+  "displayName": "Nguyễn Trường Minh",
+  "DOB": "2021-10-09T03:36:33.000+00:00",
+  "role": 0,
+  "studentID": "18DH03013",
+  "email": "minhsip2510@gmail.com",
+  "phone": "+84 338658656",
+  "username": "18DH03013",
+  "password": "$2b$10$q8bAoBW5UEYXmvPkNZcVVuK9.mv6X3faoTKqMg.qAhf4.3xsoccvm",
+  "photoURL": "https://thumbs.dreamstime.com/b/cosmos-beauty-deep-space-elements-image-furnished-nasa-science-fiction-art-102581846.jpg",
+  "studyScore": {
+    "2020-2021": [
+      {
+        "61610ed484d2094e34913045": {
+          "diligence": 10.0,
+          "regularlyTest1": 10.0,
+          "regularlyTest2": 10.0,
+          "examCount": 1,
+          "examScore": 10.0,
+          "10-scale": 10.0,
+          "4-scale": 4.0,
+          "letter-scale": "A+"
+        }
+      },
+      {
+        "61610ed484d2094e34913045": {
+          "diligence": 10.0,
+          "regularlyTest1": 10.0,
+          "regularlyTest2": 10.0,
+          "examCount": 1,
+          "examScore": 10.0,
+          "10-scale": 10.0,
+          "4-scale": 4.0,
+          "letter-scale": "A+"
+        }
+      }
+    ]
+  },
+  "curricularScore": {
+    "2020-2021": [
+      {
+        "score": 99,
+        "rating": "Xuất sắc"
+      },
+      {
+        "score": 89,
+        "rating": "Tốt"
+      }
+    ]
+  },
+  "createdAt": "2021-10-09T03:39:00.069+00:00",
+  "updatedAt": "2021-10-09T03: 39: 00.069+00: 00"
+}
