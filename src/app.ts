@@ -1,6 +1,5 @@
 import http from 'http';
 import express from 'express';
-import morgan from 'morgan';
 import cors from 'cors';
 import passport from 'passport';
 import logging from './config/logger';
@@ -8,9 +7,17 @@ import config from './config/config';
 import mongoose from 'mongoose';
 import userRoutes from './routes/user.routes';
 import authRoutes from './routes/auth.routes';
+import covidCrawlerRoutes from './routes/covidCrawler.routes';
+
+import admin from 'firebase-admin';
+
+const serviceAccount = require('./service-account.json');
+admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
 
 const NAMESPACE = 'Server';
 const app = express();
+
+export const messaging = admin.messaging();
 
 // Connect to MongoDB
 mongoose
@@ -22,16 +29,18 @@ mongoose
 	});
 
 if (process.env.NODE_ENV === 'development') {
-	app.use(morgan('dev'));
-	mongoose.set('debug', true);
+	// app.use(morgan('dev')); // use logger with morgan
+	mongoose.set('debug', false);
 }
 
 // Logging the request
 app.use((req, res, next) => {
-	logging.info(NAMESPACE, `METHOD - [${req.method}], URL - [${req.url}], IP - [${req.socket.remoteAddress}]`);
+	const { method, url } = req;
+
+	logging.request(NAMESPACE, method, url);
 
 	res.on('finish', () => {
-		logging.info(NAMESPACE, `METHOD - [${req.method}], URL - [${req.url}], IP - [${req.socket.remoteAddress}], STATUS - [${res.statusCode}]`);
+		logging.response(NAMESPACE, method, url, res.statusCode);
 	});
 
 	next();
@@ -50,6 +59,7 @@ app.use(passport.initialize());
 // Routes
 app.use('/user', userRoutes);
 app.use('/auth', authRoutes);
+app.use('/covid', covidCrawlerRoutes);
 
 // Rules of API
 app.use((req, res, next) => {

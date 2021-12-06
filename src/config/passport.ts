@@ -6,9 +6,9 @@ import config from './config';
 let JwtStrategy = passportJwt.Strategy;
 let ExtractJwt = passportJwt.ExtractJwt;
 
-module.exports = () => {
+export = () => {
 	let options = {
-		secretOrKey: config.jwt_key,
+		secretOrKey: config.jwtKey,
 		jwtFromRequest: ExtractJwt.fromAuthHeaderWithScheme('jwt')
 	};
 

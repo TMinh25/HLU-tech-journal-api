@@ -6,8 +6,12 @@ import jwt from 'jsonwebtoken';
 import config from '../config/config';
 import logger from '../config/logger';
 import { isValidObjectID } from '../utils';
+import { StreamChat } from 'stream-chat';
 
 const NAMESPACE = 'User Controller';
+
+/** GetStream server instance */
+const getStreamInstance = StreamChat.getInstance(config.streamChat.apiKey, config.streamChat.apiSecret);
 
 /**	Model RefreshToken dùng để thêm refreshToken vào cơ sở dữ liệu
  */
@@ -34,13 +38,13 @@ const RefreshToken = mongoose.model(
  * [500]: Lỗi mạng hoặc lỗi server
  */
 const getAllUsers = (req: Request, res: Response, next: NextFunction) => {
-	User.find({}, '_id studentID classID displayName DOB email phone role username photoURL')
+	User.find({}, '_id streamToken classID studentID displayName DOB email phone role  photoURL')
 		.exec()
 		.then((userRes) => {
 			if (userRes.length > 0) {
-				res.status(200).json({ result: userRes, length: userRes.length });
+				res.status(200).json({ data: userRes, length: userRes.length });
 			} else {
-				res.status(404).json({ user: null, message: 'There are no user in the database' });
+				res.status(404).json({ data: null, message: 'There are no user in the database' });
 			}
 		})
 		.catch((error) =>
@@ -70,7 +74,7 @@ const getUser = (req: Request, res: Response, next: NextFunction) => {
 	if (!isValidObjectID(req.params._id)) {
 		return res.status(400).json({ message: 'Invalid parameter' });
 	}
-	User.findOne({ _id: req.params._id }, '_id studentID classID displayName DOB email phone role username photoURL')
+	User.findOne({ _id: req.params._id }, '_id streamToken classID studentID displayName DOB email phone role  photoURL')
 		.exec()
 		.then((userRes) => {
 			if (userRes === null) {
@@ -131,7 +135,7 @@ const getUserScore = (req: Request, res: Response, next: NextFunction) => {
  */
 const findUser = (req: Request, res: Response, next: NextFunction) => {
 	const { studentID, email, displayName } = req.body;
-	User.find({ studentID: RegExp(studentID, 'i'), email: RegExp(email, 'i'), displayName: RegExp(displayName, 'i') }, '_id studentID classID displayName DOB email phone role username photoURL')
+	User.find({ studentID: RegExp(studentID, 'i'), email: RegExp(email, 'i'), displayName: RegExp(displayName, 'i') }, '_id streamToken classID studentID displayName DOB email phone role  photoURL')
 		.then((result) => {
 			if (result.length === 0) {
 				return res.status(404).json({ message: 'No user found', length: 0 });
@@ -164,7 +168,6 @@ const findUser = (req: Request, res: Response, next: NextFunction) => {
  * [500]: Lỗi mạng hoặc server
  */
 const signUp = async (req: Request, res: Response, next: NextFunction) => {
-	console.log(req.body);
 	const { studentID, email, username, role, classID } = req.body;
 	var emailExists = User.exists({ email: email });
 	var usernameExists = User.exists({ username: username });
@@ -186,9 +189,14 @@ const signUp = async (req: Request, res: Response, next: NextFunction) => {
 			} else {
 				// sastified
 				req.body.password = bcrypt.hashSync(req.body.password, 10);
+				const _id = new mongoose.Types.ObjectId();
+				console.log(_id.toString());
+				const streamToken = getStreamInstance.createToken(_id.toString());
+				const userInfo = req.body;
 				const user = new User({
-					_id: new mongoose.Types.ObjectId(),
-					...req.body
+					_id,
+					streamToken,
+					...userInfo
 				});
 				return user
 					.save()
@@ -204,6 +212,54 @@ const signUp = async (req: Request, res: Response, next: NextFunction) => {
 			}
 		}
 	});
+};
+
+/** [POST]/auth/signin
+ * Nếu đăng nhập thành công => tạo accessToken để lấy thông tin người dùng
+ * refreshToken để đăng nhập lại lần sau
+ * cập nhật refreshToken vào trong cơ sở dữ liệu
+ * @param req.body
+ * Chứa object thông tin đăng nhập { username, password }
+ * @returns
+ * [200]: Đăng nhập thành công
+ * 				Trả về trạng thái đăng nhập, accessToken, refreshToken
+ *
+ * [400]: Mật khẩu của tài khoản sai
+ *
+ * [404]: Tài khoản không tồn tại trong CSDL
+ *
+ * [500]: Lỗi mạng hoặc server
+ */
+const signIn = async (req: Request, res: Response, next: NextFunction) => {
+	const { username, password } = req.body;
+	if (!username || !password) {
+		return res.status(400).json({ authenticated: false, message: 'Username or password empty' });
+	}
+	try {
+		const user = await User.findOne({ username: username }).collation({ locale: 'tr', strength: 2 }).exec();
+		if (!user) {
+			return res.status(404).send({ authenticated: false, message_vi: 'Người dùng không tồn tại!', message: 'Could not find user!' });
+		}
+		if (!bcrypt.compareSync(password, user.password)) {
+			return res.status(400).send({ authenticated: false, message_vi: 'Mật khẩu của tài khoản không đúng', message: 'Password incorrect!' });
+		}
+		const userInfomation = user?.userInfomation();
+		const accessToken = user?.generateAccessToken();
+		const refreshToken = jwt.sign({ data: userInfomation }, config.jwtKey);
+		await RefreshToken.findOneAndUpdate({ _id: user._id }, { token: refreshToken }, { new: true, upsert: true });
+		// await serverClient.connectUser(
+		// 	{
+		// 		id: user._id,
+		// 		name: user.displayName,
+		// 		image: user.photoURL
+		// 	},
+		// 	user.streamToken
+		// );
+		res.status(200).send({ authenticated: true, accessToken, refreshToken });
+		console.log({ authenticated: true, accessToken, refreshToken });
+	} catch (error) {
+		res.status(500).json({ authenticated: false, error });
+	}
 };
 
 /**	[DELETE]/auth/:_id
@@ -241,46 +297,6 @@ const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
 	// }
 };
 
-/** [POST]/auth/signin
- * Nếu đăng nhập thành công => tạo accessToken để lấy thông tin người dùng
- * refreshToken để đăng nhập lại lần sau
- * cập nhật refreshToken vào trong cơ sở dữ liệu
- * @param req.body
- * Chứa object thông tin đăng nhập { username, password }
- * @returns
- * [200]: Đăng nhập thành công
- * 				Trả về trạng thái đăng nhập, accessToken, refreshToken
- *
- * [400]: Mật khẩu của tài khoản sai
- *
- * [404]: Tài khoản không tồn tại trong CSDL
- *
- * [500]: Lỗi mạng hoặc server
- */
-const signIn = async (req: Request, res: Response, next: NextFunction) => {
-	const { username, password } = req.body;
-	console.warn(req.body);
-	if (!username || !password) {
-		return res.status(400).json({ authenticated: false, message: 'Username or password empty' });
-	}
-	try {
-		const user = await User.findOne({ username: username }).collation({ locale: 'tr', strength: 2 }).exec();
-		if (!user) {
-			return res.status(404).send({ authenticated: false, message_vi: 'Người dùng không tồn tại!', message: 'Could not find user!' });
-		}
-		if (!bcrypt.compareSync(password, user.password)) {
-			return res.status(400).send({ authenticated: false, message_vi: 'Mật khẩu của tài khoản không đúng', message: 'Password incorrect!' });
-		}
-		const userInfomation = user?.userInfomation();
-		const accessToken = user?.generateAccessToken();
-		const refreshToken = jwt.sign({ data: userInfomation }, config.jwt_key);
-		await RefreshToken.findOneAndUpdate({ _id: user._id }, { token: refreshToken }, { new: true, upsert: true });
-		res.status(200).send({ authenticated: true, accessToken, refreshToken });
-	} catch (error) {
-		res.status(500).json({ authenticated: false, error });
-	}
-};
-
 /** [GET]/auth/access-token
  * @param req.body:
  * Chứa refreshToken để tạo accessToken mới để đăng nhập
@@ -301,14 +317,14 @@ const getAccessToken = (req: Request, res: Response, next: NextFunction) => {
 				if (!isTokenExists) {
 					res.status(403).send({ success: false, message_vi: 'Token không hợp lệ', message: 'Invalid token' });
 				} else {
-					var decoded = jwt.verify(oldRefreshToken, config.jwt_key, {
+					var decoded = jwt.verify(oldRefreshToken, config.jwtKey, {
 						algorithms: ['HS512', 'HS256']
 					});
 					// Tìm user với _id đã giải mã
 					const user = await User.findOne({ _id: (<any>decoded).data._id }).exec();
 					const userInfomation = user?.userInfomation();
 					const accessToken = user?.generateAccessToken();
-					const newRefreshToken = jwt.sign({ data: userInfomation }, config.jwt_key);
+					const newRefreshToken = jwt.sign({ data: userInfomation }, config.jwtKey);
 					// Cập nhật refreshToken trong cơ sở dữ liệu
 					await RefreshToken.updateOne({ token: oldRefreshToken }, { token: newRefreshToken });
 					return res.status(200).json({ success: true, accessToken, refreshToken: newRefreshToken });
@@ -338,14 +354,14 @@ const authInfo = (req: Request, res: Response, next: NextFunction) => {
 
 		jwt.verify(
 			accessToken,
-			config.jwt_key,
+			config.jwtKey,
 			{
 				algorithms: ['HS512', 'HS256']
 			},
 			(error, user) => {
 				if (error) {
 					logger.error(NAMESPACE, error?.message);
-					return res.status(403).send({ success: false, message: error?.message });
+					return res.status(403).send({ success: false, message: error?.message, message_vi: 'Token không hợp lệ' });
 				}
 				return res.status(200).json({ success: true, data: user });
 			}
@@ -366,16 +382,17 @@ const authInfo = (req: Request, res: Response, next: NextFunction) => {
  *
  * [400]: Không thể đăng xuất hoặc xóa refreshToken khỏi CSDL
  */
-const logout = (req: Request, res: Response, next: NextFunction) => {
+const signOut = (req: Request, res: Response, next: NextFunction) => {
+	// FIXME: sửa tình trạng double click trong flutter server đẩy lỗi:
+	//  CastError: Cast to ObjectId failed for value "signout" (type string) at path "_id" for model "User"
 	const refreshToken = req.body.refreshToken;
 	RefreshToken.countDocuments({ token: refreshToken }, (error, count) => {
 		if (count > 0) {
 			RefreshToken.deleteMany({ token: refreshToken }, (ok) => {
-				console.log(ok);
 				if (!ok) {
 					return res.status(200).send({ success: true, message_vi: 'Đăng xuất thành công', message: 'Sign out successfully' });
 				} else {
-					return res.status(400).send({ success: false, message: 'Unable to log out' });
+					return res.status(400).send({ success: false, message: 'Unable to log out', message_vi: 'Không thể đăng xuất' });
 				}
 			});
 		} else {
@@ -385,4 +402,4 @@ const logout = (req: Request, res: Response, next: NextFunction) => {
 	});
 };
 
-export default { getAllUsers, getUser, getUserScore, findUser, signIn, getAccessToken, logout, authInfo, signUp, deleteUser };
+export default { getAllUsers, getUser, getUserScore, findUser, signIn, getAccessToken, signOut, authInfo, signUp, deleteUser };

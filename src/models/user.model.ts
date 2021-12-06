@@ -5,8 +5,9 @@ import config from '../config/config';
 
 const UserSchema: Schema = new Schema(
 	{
-		classID: { type: Schema.Types.ObjectId, require: false, trim: true },
+		streamToken: { type: String, require: true },
 		displayName: { type: String, require: true, trim: true },
+		classID: { type: Schema.Types.ObjectId, require: false, trim: true },
 		DOB: { type: Date, require: false },
 		role: { type: Number, require: true, default: 4 },
 		studentID: { type: String, require: false },
@@ -35,7 +36,7 @@ UserSchema.methods.generateAccessToken = function (): string {
 	delete (<any>thisUser).password;
 	delete (<any>thisUser).createdAt;
 	delete (<any>thisUser).updatedAt;
-	const accessToken = jwt.sign(thisUser, config.jwt_key, { algorithm: 'HS512', expiresIn: 604800 });
+	const accessToken = jwt.sign(thisUser, config.jwtKey, { algorithm: 'HS512', expiresIn: 604800 });
 	return accessToken;
 };
 

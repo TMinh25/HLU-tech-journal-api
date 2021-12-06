@@ -1,6 +1,7 @@
 import { Document } from 'mongoose';
 
 export default interface IUser extends Document {
+	streamToken: string;
 	displayName: string;
 	classID: string;
 	DOB: Date;
