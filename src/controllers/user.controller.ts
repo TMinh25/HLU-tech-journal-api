@@ -6,12 +6,8 @@ import jwt from 'jsonwebtoken';
 import config from '../config/config';
 import logger from '../config/logger';
 import { isValidObjectID } from '../utils';
-import { StreamChat } from 'stream-chat';
 
 const NAMESPACE = 'User Controller';
-
-/** GetStream server instance */
-const getStreamInstance = StreamChat.getInstance(config.streamChat.apiKey, config.streamChat.apiSecret);
 
 /**	Model RefreshToken dùng để thêm refreshToken vào cơ sở dữ liệu
  */
@@ -191,11 +187,9 @@ const signUp = async (req: Request, res: Response, next: NextFunction) => {
 				req.body.password = bcrypt.hashSync(req.body.password, 10);
 				const _id = new mongoose.Types.ObjectId();
 				console.log(_id.toString());
-				const streamToken = getStreamInstance.createToken(_id.toString());
 				const userInfo = req.body;
 				const user = new User({
 					_id,
-					streamToken,
 					...userInfo
 				});
 				return user

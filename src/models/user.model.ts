@@ -5,7 +5,6 @@ import config from '../config/config';
 
 const UserSchema: Schema = new Schema(
 	{
-		streamToken: { type: String, require: true },
 		displayName: { type: String, require: true, trim: true },
 		classID: { type: Schema.Types.ObjectId, require: false, trim: true },
 		DOB: { type: Date, require: false },
