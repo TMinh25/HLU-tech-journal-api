@@ -8,6 +8,7 @@ import mongoose from 'mongoose';
 import userRoutes from './routes/user.routes';
 import authRoutes from './routes/auth.routes';
 import covidCrawlerRoutes from './routes/covidCrawler.routes';
+import notificationRoutes from './routes/notification.routes';
 
 import admin from 'firebase-admin';
 
@@ -60,6 +61,7 @@ app.use(passport.initialize());
 app.use('/user', userRoutes);
 app.use('/auth', authRoutes);
 app.use('/covid', covidCrawlerRoutes);
+app.use('/notification', notificationRoutes);
 
 // Rules of API
 app.use((req, res, next) => {
