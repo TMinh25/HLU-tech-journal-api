@@ -10,17 +10,14 @@ const info = (namespace: string, message: string, object?: any): void => {
 };
 
 const warn = (namespace: string, message: string, object?: any): void => {
-	console.log(getTimeStamp());
 	console.warn(`[WARN] ${getTimeStamp()} [${namespace}] ${message}`, object ?? '');
 };
 
 const error = (namespace: string, message: string, object?: any): void => {
-	console.log(getTimeStamp());
 	console.error(`[ERROR] ${getTimeStamp()} [${namespace}] ${message}`, object ?? '');
 };
 
 const debug = (namespace: string, message: string, object?: any): void => {
-	console.log(getTimeStamp());
 	console.log(`[DEBUG] ${getTimeStamp()} [${namespace}] ${message}`, object ?? '');
 };
 
@@ -48,5 +45,5 @@ export default {
 	error,
 	debug,
 	request,
-	response
+	response,
 };

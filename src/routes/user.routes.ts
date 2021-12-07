@@ -5,6 +5,6 @@ const router = express.Router();
 
 router.get('/', controller.getAllUsers);
 router.get('/:_id', controller.getUser);
-router.post('/find', controller.findUser);
+router.post('/find', controller.findUsers);
 
 export = router;

@@ -2,17 +2,20 @@ import { Document } from 'mongoose';
 
 export default interface IUser extends Document {
 	displayName: string;
-	classID: string;
-	DOB: Date;
+	aliases: string;
+	sex: number;
 	role: number;
-	studentID: string;
+	degree: string;
+	workPlace: string;
+	nation: string;
+	backgroundInfomation: string;
 	email: string;
-	phone: String;
 	username: string;
 	password: string;
 	photoURL: string;
-	studyScore: Object;
-	curricularScore: Object;
+	disabled: boolean;
+	userSetting: Object;
+	attendedArticle: Array<object>;
 	createdAt: Date;
 	updatedAt: Date;
 

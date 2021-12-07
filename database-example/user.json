@@ -1,16 +1,51 @@
 {
   "_id": "61610ed484d2094e34913045",
   "displayName": "Nguyễn Trường Minh",
-  "DOB": "2021-10-09T03:36:33.000+00:00",
-  "role": 0,
+  "aliases": "Bí danh",
+  "sex": 0,
+  "degree": "Giáo sư",
+  "workPlace": "Đại học Hạ Long",
+  "nation": "vietnam",
+  "backgroundInfomation": "Chức vụ: Trưởng phòng Đào tạo, Cơ quan: Đại học Hạ Long",
+  "role": 1,
   "email": "minhsip2510@gmail.com",
-  "phone": "+84 338658656",
   "username": "18DH03013",
   "password": "$2b$10$q8bAoBW5UEYXmvPkNZcVVuK9.mv6X3faoTKqMg.qAhf4.3xsoccvm",
   "photoURL": "https://thumbs.dreamstime.com/b/cosmos-beauty-deep-space-elements-image-furnished-nasa-science-fiction-art-102581846.jpg",
-  "attended": [
+  "disabled": false,
+  "userSetting": {
+    "theme": "light",
+    "language": "vietnam",
+    "forReviewer": {
+      "acceptingReview": true,
+      "reviewField": [
+        "Computer Science",
+        "Artificial Inteligence"
+      ]
+    },
+    "forReader": {
+      "acceptingEmail": true,
+      "acceptingNotification": true
+    }
+  },
+  "attendedArticle": [
     {
-         
+      "_id": "61610ed484d2094e34913045",
+      "type": "magazine",
+      "name": "Tạp chí khoa học công nghệ",
+      "number": 12,
+      "articleId": "61610ed484d2094e34913045",
+      "status": "publishing",
+      "role": 0
+    },
+    {
+      "_id": "61610ed484d2094e34913045",
+      "type": "conference",
+      "name": "Hội nghị an toàn thông tin lần thứ 2",
+      "number": null,
+      "articleId": "61610ed484d2094e34913045",
+      "status": "published",
+      "role": 1
     }
   ],
   "createdAt": "2021-10-09T03:39:00.069+00:00",
