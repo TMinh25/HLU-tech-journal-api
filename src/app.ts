@@ -44,7 +44,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 var corsOptions = {
 	origin: '*',
-	optionsSuccessStatus: 200
+	optionsSuccessStatus: 200,
 };
 app.use(cors());
 app.use(passport.initialize());
@@ -72,10 +72,11 @@ app.use((req, res, next) => {
 	const error = new Error('not found');
 
 	return res.status(404).json({
-		message: error.message
+		message: error.message,
 	});
 });
 
 // Create the server
 const httpServer = http.createServer(app);
-httpServer.listen(config.server.port, () => logging.info(NAMESPACE, `Server running on ${config.server.hostname}:${config.server.port}`));
+const { port, hostname } = config.server;
+httpServer.listen({ port: port, host: '0.0.0.0' }, () => logging.info(NAMESPACE, `Server running on ${hostname}:${port}`));
