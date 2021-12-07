@@ -4,10 +4,13 @@
   "description": "",
   "main": "src/app.ts",
   "engines": {
-    "node": "17.0.1"
+    "node": "17.0.1",
+    "yarn": "1.22.15",
+    "vscode": "^1.22.0"
   },
   "scripts": {
-    "build": "rmdir /s build && prettier --write src && tsc -w",
+    "build": "rmdir /s build && prettier --write src && tsc",
+    "heroku-postbuild": "tsc",
     "start": "nodemon src/app.ts"
   },
   "author": "",
