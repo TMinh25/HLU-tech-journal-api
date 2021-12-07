@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "rmdir /s build && tsc",
-    "heroku-postbuild": "rmdir /s build && tsc",
+    "heroku-postbuild": "tsc",
     "start": "nodemon src/app.ts"
   },
   "author": "",
