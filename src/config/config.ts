@@ -11,7 +11,7 @@ const MONGO_OPTIONS: object = {
 	keepAlive: true,
 	poolSize: 50,
 	autoIndex: false,
-	retryWrites: false
+	retryWrites: false,
 };
 
 const MONGO_USERNAME: string = process.env.MONGO_USERNAME || '';
@@ -23,22 +23,22 @@ const MONGO = {
 	username: MONGO_USERNAME,
 	password: MONGO_PASSWORD,
 	options: MONGO_OPTIONS,
-	url: `mongodb+srv://${MONGO_USERNAME}:${MONGO_PASSWORD}@${MONGO_HOST}`
+	url: `mongodb+srv://${MONGO_USERNAME}:${MONGO_PASSWORD}@${MONGO_HOST}`,
 };
 
 const SERVER_HOSTNAME = process.env.SERVER_HOSTNAME || 'localhost';
-const SERVER_PORT = process.env.SERVER_PORT || 3000;
+const SERVER_PORT = process.env.PORT || 3000;
 
 const SERVER = {
 	hostname: SERVER_HOSTNAME,
-	port: SERVER_PORT
+	port: SERVER_PORT,
 };
 
 const JWT_KEY = process.env.JWT_KEY || 'this.is.my.secret';
 
 const STREAM_CHAT = {
 	apiKey: process.env.STREAM_CHAT_API_KEY || 'wfkg5ysm9qcp',
-	apiSecret: process.env.STREAM_CHAT_API_SECRET || 'NguyenTruongMinh735568'
+	apiSecret: process.env.STREAM_CHAT_API_SECRET || 'NguyenTruongMinh735568',
 };
 
 const SERVICE_ACCOUNT = {
@@ -52,7 +52,7 @@ const SERVICE_ACCOUNT = {
 	auth_uri: 'https://accounts.google.com/o/oauth2/auth',
 	token_uri: 'https://oauth2.googleapis.com/token',
 	auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
-	client_x509_cert_url: 'https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-znjo1%40chatty-f361f.iam.gserviceaccount.com'
+	client_x509_cert_url: 'https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-znjo1%40chatty-f361f.iam.gserviceaccount.com',
 };
 
 const config = {
@@ -60,7 +60,7 @@ const config = {
 	server: SERVER,
 	jwtKey: JWT_KEY,
 	streamChat: STREAM_CHAT,
-	serviceAccount: SERVICE_ACCOUNT
+	serviceAccount: SERVICE_ACCOUNT,
 };
 
 export default config;
