@@ -1,10 +1,11 @@
 import express from 'express';
 import controller from '../controllers/user.controller';
 
-const router = express.Router();
+const userRoutes = express.Router();
 
-router.get('/', controller.getAllUsers);
-router.get('/:_id', controller.getUser);
-router.post('/find', controller.findUsers);
+userRoutes.get('/', controller.getAllUsers);
+userRoutes.get('/:_id', controller.getUser);
+userRoutes.post('/find', controller.findUsers);
+userRoutes.delete('/:_id', controller.deleteUser);
 
-export = router;
+export = userRoutes;

@@ -1,41 +1,50 @@
 import http from 'http';
-import express from 'express';
+import express, { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
 import passport from 'passport';
-import logging from './config/logger';
-import config from './config/config';
 import mongoose from 'mongoose';
+import logger from './config/logger';
+import config from './config/config';
 import userRoutes from './routes/user.routes';
 import authRoutes from './routes/auth.routes';
 import covidCrawlerRoutes from './routes/covidCrawler.routes';
+import plagiarismRoutes from './routes/plagiarismCrawler.routes';
+import fileStorageRoutes from './routes/fileStorage.routes';
+import { mongoDbInitValidation } from './middlewares/initValidation';
+import path from 'path';
 
 const NAMESPACE = 'Server';
 const app = express();
 
-// Connect to MongoDB
-mongoose
+// Initialization
+export default mongoose
 	.connect(config.mongo.url, config.mongo.options)
-	.then(async (res) => logging.info(NAMESPACE, 'Connected to MongoDB'))
-	.catch((e) => {
-		logging.error(NAMESPACE, e.message, e);
+	.then((_) => {
+		logger.info(NAMESPACE, 'Connected to MongoDB');
+	})
+	.catch((error) => {
+		logger.error(NAMESPACE, 'Failed to connect to MongoDB', error);
 		process.exit(1);
 	});
 
 if (process.env.NODE_ENV === 'development') {
-	// app.use(morgan('dev')); // use logger with morgan
 	mongoose.set('debug', false);
 }
 
 // Logging the request
-app.use((req, res, next) => {
+app.use((req: Request, res: Response, next: NextFunction) => {
 	const { method, url } = req;
+	logger.request(NAMESPACE, method, url);
 
-	logging.request(NAMESPACE, method, url);
-
+	// log when finish request
 	res.on('finish', () => {
-		logging.response(NAMESPACE, method, url, res.statusCode);
+		logger.response(NAMESPACE, method, url, res.statusCode);
 	});
-
+	// log when error appear
+	res.on('error', (error) => {
+		logger.error(NAMESPACE, `${error.stack}`);
+		if (error) return res.status(500).send({ message: 'Server is down!', error });
+	});
 	next();
 });
 
@@ -46,13 +55,15 @@ var corsOptions = {
 	origin: '*',
 	optionsSuccessStatus: 200,
 };
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(passport.initialize());
 
 // Routes
-app.use('/user', userRoutes);
-app.use('/auth', authRoutes);
+app.use('/user', mongoDbInitValidation, userRoutes);
+app.use('/auth', mongoDbInitValidation, authRoutes);
 app.use('/covid', covidCrawlerRoutes);
+app.use('/plagiarism', plagiarismRoutes);
+app.use('/files', mongoDbInitValidation, fileStorageRoutes);
 
 // Rules of API
 app.use((req, res, next) => {
@@ -79,4 +90,4 @@ app.use((req, res, next) => {
 // Create the server
 const httpServer = http.createServer(app);
 const { port, hostname } = config.server;
-httpServer.listen({ port: port, host: '0.0.0.0' }, () => logging.info(NAMESPACE, `Server running on ${hostname}:${port}`));
+httpServer.listen({ port: port, host: '0.0.0.0' }, () => logger.info(NAMESPACE, `Server running on ${hostname}:${port}`));

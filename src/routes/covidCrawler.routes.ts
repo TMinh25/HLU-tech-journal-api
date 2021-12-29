@@ -1,12 +1,12 @@
 import express from 'express';
 import controller from '../controllers/covidCrawler.controller';
 
-const router = express.Router();
+const covidCrawlerRoutes = express.Router();
 
-router.get('/', controller.crawlSummaryData);
-router.get('/vietnam/province', controller.crawlVietNamProvinceData);
-router.get('/countries', controller.crawlCountryList);
-router.get('/countries/summary', controller.crawlCountriesSummary);
-router.get('/country/:slug', controller.crawlCountrySummary);
+covidCrawlerRoutes.get('/', controller.crawlSummaryData);
+covidCrawlerRoutes.get('/vietnam/province', controller.crawlVietNamProvinceData);
+covidCrawlerRoutes.get('/countries', controller.crawlCountryList);
+covidCrawlerRoutes.get('/countries/summary', controller.crawlCountriesSummary);
+covidCrawlerRoutes.get('/country/:slug', controller.crawlCountrySummary);
 
-export = router;
+export = covidCrawlerRoutes;

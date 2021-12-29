@@ -2,14 +2,14 @@ import { Request, Response, NextFunction } from 'express';
 import User from '../models/user.model';
 import bcrypt from 'bcrypt';
 import mongoose, { Schema } from 'mongoose';
-import jwt from 'jsonwebtoken';
+import jwt, { TokenExpiredError } from 'jsonwebtoken';
 import config from '../config/config';
 import logger from '../config/logger';
 import { isValidObjectID } from '../utils';
 
 const NAMESPACE = 'User Controller';
 
-/**	Model RefreshToken dùng để thêm refreshToken vào cơ sở dữ liệu
+/**	Model `RefreshToken` dùng để thêm refreshToken vào cơ sở dữ liệu
  */
 const RefreshToken = mongoose.model(
 	'Refresh Token',
@@ -23,7 +23,7 @@ const RefreshToken = mongoose.model(
 	),
 );
 
-/** [GET]/user/
+/** `[GET]/user/`
  * @returns
  * Trả về tất cả người dùng có trong cơ sở dữ liệu nếu không có người dùng nào trả về [null]
  *
@@ -52,7 +52,7 @@ const getAllUsers = (req: Request, res: Response, next: NextFunction) => {
 		);
 };
 
-/** [GET]/user/:_id
+/** `[GET]/user/:_id`
  * @param req.params
  * Chứa id của người dùng cần lấy
  * @returns
@@ -83,7 +83,7 @@ const getUser = (req: Request, res: Response, next: NextFunction) => {
 		.catch((error) => res.status(500).json({ success: false, message: error.message, error: error }));
 };
 
-/** [GET]/user/attended/:_id
+/** `[GET]/user/attended/:_id`
  * @param req.params
  * Chứa id của người dùng cần xem điểm
  * @returns
@@ -115,7 +115,7 @@ const getUserAttendedArticle = (req: Request, res: Response, next: NextFunction)
 		.catch((error) => res.status(500).json({ success: false, message: error.message, error: error }));
 };
 
-/** [POST]/user/find
+/** `[POST]/user/find`
  * @param req.body
  * Chứa giá trị: aliases, email, username, workPlace
  * @returns Trả về những người dùng có 3 giá trị chứa 3 giá trị bên trên
@@ -145,7 +145,8 @@ const findUsers = (req: Request, res: Response, next: NextFunction) => {
 		});
 };
 
-/**	[DELETE]/auth/:_id
+/**	`[DELETE]/user/:_id`
+ * @deprecated *remove due to unnessesary*
  * @param req.params
  * Chứa ID của người dùng cần xóa
  * @returns
@@ -180,7 +181,7 @@ const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
 	return res.status(423).json({ message: 'this route is currently locked' });
 };
 
-/** [GET]/auth/access-token
+/** `[GET]/auth/access-token`
  * @param req.body:
  * Chứa refreshToken để tạo accessToken mới để đăng nhập
  * @returns
@@ -219,7 +220,7 @@ const getAccessToken = (req: Request, res: Response, next: NextFunction) => {
 	}
 };
 
-/** [GET]/auth/info
+/** `[GET]/auth/info`
  * @param req.headers
  * [Authorization]: Bearer *accessToken
  * @returns
@@ -243,8 +244,12 @@ const authInfo = (req: Request, res: Response, next: NextFunction) => {
 			},
 			(error, user) => {
 				if (error) {
-					logger.error(NAMESPACE, error?.message);
-					return res.status(403).json({ success: false, message: error?.message, message_vn: 'Token không hợp lệ' });
+					if (error.name === TokenExpiredError.name) {
+						logger.error(NAMESPACE, 'jwt expired');
+						return res.status(401).json({ success: false, message: 'jwt expired', message_vn: 'Token hết hạn' });
+					}
+					logger.error(NAMESPACE, error.name, error);
+					return res.status(401).json({ success: false, message_vn: 'Token lỗi', message: 'Invalid token' });
 				}
 				return res.status(200).json({ success: true, data: user });
 			},
@@ -254,7 +259,7 @@ const authInfo = (req: Request, res: Response, next: NextFunction) => {
 	}
 };
 
-/** [GET]/auth/signup	{body: User}
+/** `[GET]/auth/signup`
  * Tạo người dùng mới trong cơ sở dữ liệu
  *
  * Phải mã hóa mật khẩu của người dùng với salt = 10
@@ -274,46 +279,53 @@ const authInfo = (req: Request, res: Response, next: NextFunction) => {
  * [500]: Lỗi mạng hoặc server
  */
 const signUp = async (req: Request, res: Response, next: NextFunction) => {
-	const { email, username, role, workPlace } = req.body;
-	var emailExists = User.exists({ email: email });
-	var usernameExists = User.exists({ username: username });
-	Promise.all([emailExists, usernameExists]).then((infoExists) => {
-		if (infoExists[0]) {
-			// email exists
-			return res.status(409).json({ success: false, message: 'Email is already been taken', message_vn: 'Email đã tồn tại' });
-		} else if (infoExists[1]) {
-			// username exists
-			return res.status(409).json({ success: false, message: 'Username is already been taken', message_vn: 'Tên tài khoản đã tồn tại' });
-		} else {
-			if (workPlace === '') {
-				// Phải chọn nơi làm việc
-				return res.status(409).json({ success: false, message: 'Please choose your work place', message_vn: 'Chọn nơi bạn đang làm việc' });
-			} else {
-				// sastified
-				req.body.password = bcrypt.hashSync(req.body.password, 10);
-				const _id = new mongoose.Types.ObjectId();
-				const userInfo = req.body;
-				const user = new User({
-					_id,
-					...userInfo,
-				});
-				return user
-					.save()
-					.then((result) => {
-						res.status(201).json({ success: true, data: result });
-					})
-					.catch((error) =>
-						res.status(500).json({
-							success: false,
-							message: error.message,
-						}),
-					);
-			}
+	const { displayName, degree, workPlace, nation, email, username, password } = req.body;
+
+	const emptyValidatorObject = <Object>{ ...{ displayName, degree, workPlace, nation, email, username, password } };
+	const emptyFieldArray = [];
+	for (const [key, value] of Object.entries(emptyValidatorObject)) {
+		if (!value) {
+			emptyFieldArray.push(key);
 		}
+	}
+	if (emptyFieldArray.length > 0)
+		res.status(400).json({
+			success: false,
+			message: 'Please fill in the form',
+			message_vn: 'Hãy điền đầy đủ thông tin',
+			data: emptyFieldArray,
+		});
+
+	req.body.password = bcrypt.hashSync(req.body.password, 10);
+	const _id = new mongoose.Types.ObjectId();
+	const userInfo = req.body;
+	const user = new User({
+		_id,
+		...userInfo,
 	});
+	return user
+		.save()
+		.then((result) => {
+			res.status(201).json({ success: true, data: result });
+		})
+		.catch((error) => {
+			if (error.name === 'ValidationError') {
+				res.status(500).json({
+					success: false,
+					message: error.message,
+					message_vn: 'Thông tin trùng lặp tồn tại trong cơ sở dữ liệu',
+					error,
+				});
+			}
+			res.status(500).json({
+				success: false,
+				message: error.message,
+				error,
+			});
+		});
 };
 
-/** [POST]/auth/signin
+/** `[POST]/auth/signin`
  * Nếu đăng nhập thành công => tạo accessToken để lấy thông tin người dùng
  * refreshToken để đăng nhập lại lần sau
  * cập nhật refreshToken vào trong cơ sở dữ liệu
@@ -357,7 +369,7 @@ const signIn = async (req: Request, res: Response, next: NextFunction) => {
 	}
 };
 
-/** [DELETE]/auth/logout
+/** `[DELETE]/auth/logout`
  * @param req.body
  * chứa refreshToken của tài khoản cần đăng xuất
  * @returns

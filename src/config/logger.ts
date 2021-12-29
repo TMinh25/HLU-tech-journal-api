@@ -2,41 +2,43 @@ import chalk from 'chalk';
 
 // should log timestamp on production enviroment
 const getTimeStamp = (): string => {
-	return new Date().toTimeString().split(' ')[0];
+	return chalk.grey(new Date().toTimeString().split(' ')[0]);
 };
 
-const info = (namespace: string, message: string, object?: any): void => {
-	console.log(`[INFO] ${getTimeStamp()} [${namespace}] ${message}`, object ?? '');
+const info = (namespace: string, message: any, object?: any): void => {
+	console.log(`[${chalk.magenta('INFO')}] ${getTimeStamp()} [${namespace}]`, message ?? '', object ?? '');
 };
 
-const warn = (namespace: string, message: string, object?: any): void => {
-	console.warn(`[WARN] ${getTimeStamp()} [${namespace}] ${message}`, object ?? '');
+const warn = (namespace: string, message: any, object?: any): void => {
+	console.warn(`[${chalk.yellow('WARN')}] ${getTimeStamp()} [${namespace}]`, message ?? '', object ?? '');
 };
 
-const error = (namespace: string, message: string, object?: any): void => {
-	console.error(`[ERROR] ${getTimeStamp()} [${namespace}] ${message}`, object ?? '');
+const error = (namespace: string, message: any, object?: any): void => {
+	console.error(`[${chalk.red('ERROR')}] ${getTimeStamp()} [${namespace}]`, message ?? '', object ?? '');
 };
 
-const debug = (namespace: string, message: string, object?: any): void => {
-	console.log(`[DEBUG] ${getTimeStamp()} [${namespace}] ${message}`, object ?? '');
+const debug = (namespace: string, message: any, object?: any): void => {
+	console.log(`[${chalk.blue('DEBUG')}] ${getTimeStamp()} [${namespace}]`, message ?? '', object ?? '');
 };
 
 const request = (namespace: string, method: string, url: string, object?: any): void => {
-	console.log(`[REQUEST] ${getTimeStamp()} [${namespace}] [${method}]${url}`, object ?? '');
+	console.log(`[${chalk.yellowBright('REQUEST')}] ${getTimeStamp()} [${namespace}] [${method}]${url}`, object ?? '');
 };
 
 const response = (namespace: string, method: string, url: string, status: number, object?: any): void => {
-	var statusCodeColored = null;
+	var colored: (text: string | number) => string;
 	if (status >= 500) {
-		statusCodeColored = chalk.red(status); // red
+		colored = chalk.red; // red
 	} else if (status >= 400) {
-		statusCodeColored = chalk.yellow(status); // yellow
+		colored = chalk.redBright; // orange
 	} else if (status >= 300) {
-		statusCodeColored = chalk.cyan(status); // cyan
+		colored = chalk.cyan; // cyan
 	} else if (status >= 200) {
-		statusCodeColored = chalk.green(status); // green
+		colored = chalk.green; // green
+	} else {
+		colored = chalk.gray;
 	}
-	console.log(`[RESPONSE] ${getTimeStamp()} [${namespace}] ${statusCodeColored} [${method}]${url}`, object ?? '');
+	console.log(`[${colored('RESPONSE')}] ${getTimeStamp()} [${namespace}] ${colored(status)} [${method}]${url}`, object ?? '');
 };
 
 export default {
