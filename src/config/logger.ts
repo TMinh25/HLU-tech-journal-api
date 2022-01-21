@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import config from './config';
 
 // should log timestamp on production enviroment
 const getTimeStamp = (): string => {
@@ -18,7 +19,9 @@ const error = (namespace: string, message: any, object?: any): void => {
 };
 
 const debug = (namespace: string, message: any, object?: any): void => {
-	console.log(`[${chalk.blue('DEBUG')}] ${getTimeStamp()} [${namespace}]`, message ?? '', object ?? '');
+	if (config.enviroment === 'development') {
+		console.log(`[${chalk.blue('DEBUG')}] ${getTimeStamp()} [${namespace}]`, message ?? '', object ?? '');
+	}
 };
 
 const request = (namespace: string, method: string, url: string, object?: any): void => {

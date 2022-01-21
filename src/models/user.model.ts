@@ -9,7 +9,7 @@ const UserSchema: Schema = new Schema(
 		/** Họ và tên hiển thị của người dùng */
 		displayName: { type: String, require: true, trim: true, default: null }, // Tên hiển thị
 		/** Bí danh */
-		aliases: { type: String, require: false, trim: true, unique: true },
+		aliases: { type: String, require: false, trim: true, unique: false },
 		/** Giới tính
 		 * ```js
 		 * 0 = "nữ"
@@ -40,7 +40,7 @@ const UserSchema: Schema = new Schema(
 		/** Mật khẩu đã mã hóa */
 		password: { type: String, require: true, trim: true, default: null },
 		/** Link ảnh đại diện */
-		photoURL: { type: String, require: false },
+		photoURL: { type: String, require: false, default: 'https://www.seekpng.com/ipng/u2q8y3o0e6q8q8y3_person-avatar-placeholder/' },
 		/** Tài khoản người dùng bị khóa */
 		disabled: { type: Boolean, require: true, default: false },
 		/** Cài đặt của người dùng */
@@ -102,10 +102,10 @@ const UserSchema: Schema = new Schema(
 // using anonimous function for context
 UserSchema.methods.generateAccessToken = function (): string {
 	const thisUser = this.toObject();
-	delete (<any>thisUser).password;
-	delete (<any>thisUser).createdAt;
-	delete (<any>thisUser).updatedAt;
-	const accessToken = jwt.sign(thisUser, config.jwtKey, { algorithm: 'HS512', expiresIn: 30 });
+	// TODO: ugly code
+	const { _id, displayName, aliases, sex, role, degree, workPlace, nation, email, photoURL, userSetting } = <IUser>thisUser;
+	const accessTokenInfo = { ...{ _id, displayName, aliases, sex, role, degree, workPlace, nation, email, photoURL, userSetting } };
+	const accessToken = jwt.sign(accessTokenInfo, config.jwtKey, { algorithm: 'HS512', expiresIn: '7d' }); // expired in 7 days
 	return accessToken;
 };
 
@@ -115,10 +115,8 @@ UserSchema.methods.generateAccessToken = function (): string {
 // using anonimous function for context
 UserSchema.methods.userInfomation = function (): object {
 	const thisUser = this.toObject();
-	delete (<any>thisUser).password;
-	delete (<any>thisUser).createdAt;
-	delete (<any>thisUser).updatedAt;
-	return thisUser;
+	const { _id, displayName, aliases, sex, role, degree, workPlace, nation, email, photoURL, userSetting } = <IUser>thisUser;
+	return { ...{ _id, displayName, aliases, sex, role, degree, workPlace, nation, email, photoURL, userSetting } };
 };
 
 // add unique plugin for mongoose

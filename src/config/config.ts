@@ -43,12 +43,20 @@ const STREAM_CHAT = {
 	apiSecret: process.env.STREAM_CHAT_API_SECRET || 'NguyenTruongMinh735568',
 };
 
+const CLOUDINARY = {
+	url: process.env.CLOUDINARY_URL,
+	apiSecret: process.env.CLOUDINARY_API_SECRET,
+	apiKey: process.env.CLOUDINARY_API_KEY,
+	cloudName: process.env.CLOUDINARY_CLOUD_NAME || 'gr4y',
+};
+
 const config = {
 	mongo: MONGO,
 	server: SERVER,
 	jwtKey: JWT_KEY,
 	streamChat: STREAM_CHAT,
-	uploadDir: './uploads/',
+	cloudinary: CLOUDINARY,
+	enviroment: process.env.NODE_ENV,
 };
 
 export default config;

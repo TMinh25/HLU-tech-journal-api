@@ -3,10 +3,7 @@ import { isValidObjectID } from '../utils';
 
 export const paramsIsValidMongoID = (req: Request, res: Response, next: NextFunction, params: string[]) => {
 	const everyParamsIsValid = params.every((param) => isValidObjectID(req.params[param]));
-	// console.log(everyParamsIsValid);
-	params.forEach((param) => {
-		console.log(req.params[param]);
-	});
+
 	if (everyParamsIsValid) {
 		next();
 	} else {

@@ -1,51 +1,55 @@
-import express, { NextFunction, Request, Response } from 'express';
-import config from '../config/config';
+import express from 'express';
 import controller from '../controllers/fileStorage.controller';
-import { checkDirectory, checkFileType } from '../middlewares/fileTypeValidation';
-import multer, { diskStorage } from 'multer';
-import mongoose from 'mongoose';
-import path from 'path';
+import { checkFileType } from '../middlewares/fileTypeValidation';
+import multer, { memoryStorage } from 'multer';
 import MongoFile from '../models/file.model';
 import logger from '../config/logger';
 import { paramsIsValidMongoID } from '../middlewares/paramsValidation';
+import { tokenAuthorization } from '../middlewares/tokenAuthorization';
 
 const NAMESPACE = 'FileStorageRoutes';
 
 const fileStorageRoutes = express.Router();
 
 const upload = multer({
-	storage: diskStorage({
-		destination(req, file, cb) {
-			const { collectionId } = req.params;
-			cb(null, `${config.uploadDir}${collectionId}`);
-		},
-		filename(req, file, cb) {
-			const { fileId } = req.query;
-			const filename = fileId + path.extname(file.originalname);
-			cb(null, filename);
-		},
-	}),
+	storage: memoryStorage(),
 	limits: {
 		fileSize: 10000000, // max file size 10MB = 10000000 bytes
 	},
-	fileFilter: (req, file, callback) => checkFileType(file, callback),
 });
 
 fileStorageRoutes.post(
-	'/upload/collection/:collectionId',
-	checkDirectory, // check for exists directory
-	(req, res, next) => paramsIsValidMongoID(req, res, next, ['collectionId']), // check for valid params
+	'/upload',
 	(req, res, next) => {
-		console.log(req.params);
 		const file = new MongoFile();
-		req.query.fileId = file._id;
-		// pass the fileId to upload.single
+		req.params.fileId = file._id;
+		// pass the fileId to upload.single to set filename
 		next();
 	}, // get file _id in mongo model
 	upload.single('file'), // upload file to directory
+	controller.uploadFile, // upload file info to mongodb
+);
+
+fileStorageRoutes.post(
+	'/upload/collection/:collectionId',
+	(req, res, next) => {
+		const mimetype = 'application/pdf';
+		if (req.file && req.file.mimetype !== mimetype) {
+			res.status(400).json({ success: false, error: { title: 'Chỉ chấp nhận file pdf' } });
+		}
+		next();
+	},
+	(req, res, next) => {
+		const file = new MongoFile();
+		req.params.fileId = file._id;
+		// pass the fileId to upload.single to set filename
+		next();
+	}, // get file _id in mongo model
+	(req, res, next) => paramsIsValidMongoID(req, res, next, ['collectionId', 'fileId']), // check for valid params
+	upload.single('file'), // upload file to directory
 	controller.uploadFileToCollection, // upload file info to mongodb
 );
+
 fileStorageRoutes.get('/collection/:collectionId', (req, res, next) => paramsIsValidMongoID(req, res, next, ['collectionId']), controller.getAllFilesInCollection);
-fileStorageRoutes.get('/download/article/:articleId', (req, res, next) => paramsIsValidMongoID(req, res, next, ['articleId']), controller.downloadFile);
 
 export = fileStorageRoutes;

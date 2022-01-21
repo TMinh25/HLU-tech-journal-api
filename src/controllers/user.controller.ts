@@ -5,7 +5,7 @@ import mongoose, { Schema } from 'mongoose';
 import jwt, { TokenExpiredError } from 'jsonwebtoken';
 import config from '../config/config';
 import logger from '../config/logger';
-import { isValidObjectID } from '../utils';
+import { getAuthorizationHeaderToken, isValidObjectID } from '../utils';
 
 const NAMESPACE = 'User Controller';
 
@@ -40,14 +40,16 @@ const getAllUsers = (req: Request, res: Response, next: NextFunction) => {
 			if (userRes.length > 0) {
 				res.status(200).json({ success: true, data: userRes, length: userRes.length });
 			} else {
-				res.status(404).json({ success: false, data: null, message: 'There are no user in the database' });
+				res.status(404).json({ success: false, data: null, error: { title: 'Không có người dùng nào trong cơ sở dữ liệu' } });
 			}
 		})
 		.catch((error) =>
 			res.status(500).json({
 				success: false,
-				message: error.message,
-				e: error,
+				error: {
+					title: error.message,
+					error,
+				},
 			}),
 		);
 };
@@ -69,18 +71,18 @@ const getAllUsers = (req: Request, res: Response, next: NextFunction) => {
  */
 const getUser = (req: Request, res: Response, next: NextFunction) => {
 	if (!isValidObjectID(req.params._id)) {
-		return res.status(400).json({ success: false, message: 'Invalid parameter' });
+		return res.status(400).json({ success: false, title: 'ID người dùng không đúng' });
 	}
 	User.findOne({ _id: req.params._id }, '_id displayName aliases sex degree workPlace nation backgroundInfomation email photoURL')
 		.exec()
 		.then((userRes) => {
 			if (userRes === null) {
-				res.status(404).json({ success: false, message: "Can't find user", message_vn: 'Không tìm thấy người dùng' });
+				res.status(404).json({ success: false, error: { title: 'Không tìm thấy người dùng' } });
 			} else {
 				res.status(200).json({ success: true, data: userRes });
 			}
 		})
-		.catch((error) => res.status(500).json({ success: false, message: error.message, error: error }));
+		.catch((error) => res.status(500).json({ success: false, error: { title: error.message, error: error } }));
 };
 
 /** `[GET]/user/attended/:_id`
@@ -101,18 +103,18 @@ const getUser = (req: Request, res: Response, next: NextFunction) => {
  */
 const getUserAttendedArticle = (req: Request, res: Response, next: NextFunction) => {
 	if (!isValidObjectID(req.params._id)) {
-		return res.status(400).json({ success: false, message: 'Invalid parameter', message_vn: 'ID không khả dụng' });
+		return res.status(400).json({ success: false, error: { title: 'ID không khả dụng' } });
 	}
 	User.findOne({ _id: req.params._id }, 'attendedArticle')
 		.exec()
 		.then((attendedArticle) => {
 			if (attendedArticle === null) {
-				res.status(404).json({ success: false, message: "Can't find user", message_vn: 'Không tìm thấy người dùng' });
+				res.status(404).json({ success: false, error: { title: 'Không tìm thấy người dùng' } });
 			} else {
 				res.status(200).json({ success: true, data: attendedArticle });
 			}
 		})
-		.catch((error) => res.status(500).json({ success: false, message: error.message, error: error }));
+		.catch((error) => res.status(500).json({ success: false, error: { title: error.message, error: error } }));
 };
 
 /** `[POST]/user/find`
@@ -128,16 +130,16 @@ const getUserAttendedArticle = (req: Request, res: Response, next: NextFunction)
  */
 const findUsers = (req: Request, res: Response, next: NextFunction) => {
 	const { aliases, email, displayName, workPlace } = req.body;
-	logger.debug(NAMESPACE, 'findUsers', req.body);
+	// logger.debug(NAMESPACE, 'findUsers', req.body);
 	User.find(
 		{ $or: [{ aliases: RegExp(aliases, 'i') }, { email: email }, { displayName: displayName }, { workPlace: RegExp(workPlace, 'i') }] },
 		'_id displayName aliases sex degree workPlace nation backgroundInfomation email photoURL',
 	)
 		.then((result) => {
 			if (result.length === 0) {
-				return res.status(404).json({ message: 'No user found', length: 0 });
+				return res.status(404).json({ data: null, message: 'No user found', length: 0 });
 			}
-			return res.status(200).json({ result, length: result.length });
+			return res.status(200).json({ data: result, length: result.length });
 		})
 		.catch((error) => {
 			logger.error(NAMESPACE, error.message, error);
@@ -192,32 +194,26 @@ const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
  * [500]: Lỗi mạng hoặc server
  */
 const getAccessToken = (req: Request, res: Response, next: NextFunction) => {
-	const authHeader = req.headers.authorization;
-	if (authHeader && authHeader.split(' ')[0] === 'Bearer') {
-		const oldRefreshToken = authHeader.split(' ')[1];
-		if (oldRefreshToken == null) return res.status(401).json({ success: false, message_vn: 'Token không hợp lệ', message: 'Invalid token' });
-		RefreshToken.exists({ token: oldRefreshToken })
-			.then(async (isTokenExists) => {
-				if (!isTokenExists) {
-					res.status(403).json({ success: false, message_vn: 'Token không hợp lệ', message: 'Invalid token' });
-				} else {
-					var decoded = jwt.verify(oldRefreshToken, config.jwtKey, {
-						algorithms: ['HS512', 'HS256'],
-					});
-					// Tìm user với _id đã giải mã
-					const user = await User.findOne({ _id: (<any>decoded).data._id }).exec();
-					const accessToken = user?.generateAccessToken();
-					const userInfomation = user?.userInfomation();
-					const newRefreshToken = jwt.sign({ data: userInfomation }, config.jwtKey);
-					// Cập nhật refreshToken trong cơ sở dữ liệu
-					await RefreshToken.updateOne({ token: oldRefreshToken }, { token: newRefreshToken });
-					return res.status(200).json({ success: true, accessToken, refreshToken: newRefreshToken });
-				}
-			})
-			.catch((error) => res.status(500).json(error));
-	} else {
-		return res.status(401).json({ success: false, message_vn: 'Không thể tìm thông tin tài khoản', message: 'Could not find infomation about your account' });
-	}
+	const oldRefreshToken = req.body.refreshToken;
+	RefreshToken.exists({ token: oldRefreshToken })
+		.then(async (isTokenExists) => {
+			if (!isTokenExists) {
+				res.status(403).json({ success: false, error: { title: 'Token không hợp lệ' } });
+			} else {
+				var decoded = jwt.verify(oldRefreshToken, config.jwtKey, {
+					algorithms: ['HS512', 'HS256'],
+				});
+				// Tìm user với _id đã giải mã
+				const user = await User.findOne({ _id: (<any>decoded).data._id }).exec();
+				const accessToken = user?.generateAccessToken();
+				const userInfomation = user?.userInfomation();
+				const newRefreshToken = jwt.sign({ data: userInfomation }, config.jwtKey);
+				// Cập nhật refreshToken trong cơ sở dữ liệu
+				await RefreshToken.updateOne({ token: oldRefreshToken }, { token: newRefreshToken });
+				return res.status(200).json({ success: true, accessToken, refreshToken: newRefreshToken });
+			}
+		})
+		.catch((error) => res.status(500).json(error));
 };
 
 /** `[GET]/auth/info`
@@ -231,32 +227,26 @@ const getAccessToken = (req: Request, res: Response, next: NextFunction) => {
  *
  * [400]: Token truyền vào lỗi hoặc không có headers Authorization
  */
-const authInfo = (req: Request, res: Response, next: NextFunction) => {
-	const authHeader = req.headers.authorization;
-	if (authHeader && authHeader.split(' ')[0] === 'Bearer') {
-		const accessToken = authHeader.split(' ')[1];
-
-		jwt.verify(
-			accessToken,
-			config.jwtKey,
-			{
-				algorithms: ['HS512', 'HS256'],
-			},
-			(error, user) => {
-				if (error) {
-					if (error.name === TokenExpiredError.name) {
-						logger.error(NAMESPACE, 'jwt expired');
-						return res.status(401).json({ success: false, message: 'jwt expired', message_vn: 'Token hết hạn' });
-					}
-					logger.error(NAMESPACE, error.name, error);
-					return res.status(401).json({ success: false, message_vn: 'Token lỗi', message: 'Invalid token' });
+const authInfo = async (req: Request, res: Response, next: NextFunction) => {
+	const accessToken = getAuthorizationHeaderToken(req);
+	jwt.verify(
+		accessToken,
+		config.jwtKey,
+		{
+			algorithms: ['HS512', 'HS256'],
+		},
+		(error, user) => {
+			if (error) {
+				if (error.name === TokenExpiredError.name) {
+					logger.error(NAMESPACE, 'jwt expired');
+					return res.status(401).json({ success: false, error: { title: 'Phiên hết hạn', description: 'Hãy đăng nhập lại' } });
 				}
-				return res.status(200).json({ success: true, data: user });
-			},
-		);
-	} else {
-		return res.status(400).json({ success: false, message_vn: 'Token lỗi', message: 'Invalid token' });
-	}
+				logger.error(NAMESPACE, error.name, error);
+				return res.status(401).json({ success: false, error: { title: 'Phiên lỗi', description: 'Hãy đăng nhập lại' } });
+			}
+			return res.status(200).json({ success: true, data: user });
+		},
+	);
 };
 
 /** `[GET]/auth/signup`
@@ -289,35 +279,31 @@ const signUp = async (req: Request, res: Response, next: NextFunction) => {
 		}
 	}
 	if (emptyFieldArray.length > 0)
-		res.status(400).json({
+		return res.status(400).json({
 			success: false,
-			message: 'Please fill in the form',
-			message_vn: 'Hãy điền đầy đủ thông tin',
-			data: emptyFieldArray,
+			error: {
+				title: 'Hãy điền đầy đủ thông tin',
+			},
+			emptyField: emptyFieldArray,
 		});
 
 	req.body.password = bcrypt.hashSync(req.body.password, 10);
-	const _id = new mongoose.Types.ObjectId();
 	const userInfo = req.body;
-	const user = new User({
-		_id,
-		...userInfo,
-	});
+	const user = new User(userInfo);
 	return user
 		.save()
 		.then((result) => {
-			res.status(201).json({ success: true, data: result });
+			return res.status(201).json({ success: true, data: result });
 		})
 		.catch((error) => {
+			logger.error(NAMESPACE, error);
 			if (error.name === 'ValidationError') {
-				res.status(500).json({
+				return res.status(500).json({
 					success: false,
-					message: error.message,
-					message_vn: 'Thông tin trùng lặp tồn tại trong cơ sở dữ liệu',
-					error,
+					error: { title: 'Thông tin trùng lặp tồn tại trong cơ sở dữ liệu', ...error },
 				});
 			}
-			res.status(500).json({
+			return res.status(500).json({
 				success: false,
 				message: error.message,
 				error,
@@ -344,18 +330,18 @@ const signUp = async (req: Request, res: Response, next: NextFunction) => {
 const signIn = async (req: Request, res: Response, next: NextFunction) => {
 	const { username, password } = req.body;
 	if (!username || !password) {
-		return res.status(400).json({ authenticated: false, message: 'Username or password empty' });
+		return res.status(400).json({ authenticated: false, error: { title: 'Hãy nhập đầy đủ thông tin' } });
 	}
 	try {
 		const user = await User.findOne({ username: username }).collation({ locale: 'tr', strength: 2 }).exec();
 		if (!user) {
-			return res.status(404).json({ authenticated: false, message_vn: 'Người dùng không tồn tại!', message: 'Could not find user!' });
+			return res.status(404).json({ authenticated: false, error: { title: 'Tài khoản không tồn tại!', description: 'Hãy đăng nhập bằng tài khoản khác' } });
 		}
 		if (!bcrypt.compareSync(password, user.password)) {
-			return res.status(401).json({ authenticated: false, message_vn: 'Mật khẩu của tài khoản không đúng', message: 'Password incorrect!' });
+			return res.status(401).json({ authenticated: false, error: { title: 'Mật khẩu của tài khoản không đúng', description: 'Hãy nhập mật khẩu đúng' } });
 		}
 		if (user.disabled) {
-			return res.status(401).json({ authenticated: false, message_vn: 'Tài khoản này hiện tại đang bị khóa', message: 'This account is currently disabled' });
+			return res.status(401).json({ authenticated: false, error: { title: 'Tài khoản này hiện tại đang bị khóa' } });
 		}
 		const accessToken = user?.generateAccessToken();
 		// get refreshToken with userInfomation
@@ -388,9 +374,9 @@ const signOut = (req: Request, res: Response, next: NextFunction) => {
 		if (count > 0) {
 			RefreshToken.deleteMany({ token: refreshToken }, (ok) => {
 				if (!ok) {
-					return res.status(200).json({ success: true, message_vn: 'Đăng xuất thành công', message: 'Sign out successfully' });
+					return res.status(200).json({ success: true, message: 'Đăng xuất thành công' });
 				} else {
-					return res.status(400).json({ success: false, message: 'Unable to log out', message_vn: 'Không thể đăng xuất' });
+					return res.status(400).json({ success: false, error: { title: 'Không thể đăng xuất' } });
 				}
 			});
 		} else {

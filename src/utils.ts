@@ -8,6 +8,7 @@ import { Files } from 'formidable';
 import fs from 'fs';
 import { google } from 'googleapis';
 import path from 'path';
+import { Request } from 'express';
 
 /** Regex của các chữ cái viết hoa (tiếng việt) */
 const vietnameseUpperCaseRegex = /[A-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪỬỮỰỲỴÝỶỸ]/g;
@@ -78,6 +79,16 @@ export function getBoolean(value: any) {
 			return false;
 	}
 }
+
+/** Lấy Token trong header Authorization */
+export const getAuthorizationHeaderToken = (req: Request): string => {
+	const authHeader = req.headers.authorization;
+
+	if (authHeader && authHeader.split(' ')[0] === 'Bearer') {
+		return authHeader.split(' ')[1];
+	}
+	return '';
+};
 
 export const dateTimezone = moment.tz(Date.now(), 'Asia/Bangkok');
 

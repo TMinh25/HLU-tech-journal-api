@@ -12,6 +12,7 @@ import plagiarismRoutes from './routes/plagiarismCrawler.routes';
 import fileStorageRoutes from './routes/fileStorage.routes';
 import { mongoDbInitValidation } from './middlewares/initValidation';
 import path from 'path';
+import { tokenAuthorization } from './middlewares/tokenAuthorization';
 
 const NAMESPACE = 'Server';
 const app = express();
@@ -27,26 +28,30 @@ export default mongoose
 		process.exit(1);
 	});
 
-if (process.env.NODE_ENV === 'development') {
+if (config.enviroment === 'development') {
 	mongoose.set('debug', false);
 }
 
 // Logging the request
-app.use((req: Request, res: Response, next: NextFunction) => {
-	const { method, url } = req;
-	logger.request(NAMESPACE, method, url);
+try {
+	app.use((req: Request, res: Response, next: NextFunction) => {
+		const { method, url } = req;
+		logger.request(NAMESPACE, method, url);
 
-	// log when finish request
-	res.on('finish', () => {
-		logger.response(NAMESPACE, method, url, res.statusCode);
+		// log when finish request
+		res.on('finish', () => {
+			logger.response(NAMESPACE, method, url, res.statusCode);
+		});
+		// log when error appear
+		res.on('error', (error) => {
+			logger.error(NAMESPACE, `${error.stack}`);
+			if (error) return res.status(500).send({ message: 'Server is down!', error });
+		});
+		next();
 	});
-	// log when error appear
-	res.on('error', (error) => {
-		logger.error(NAMESPACE, `${error.stack}`);
-		if (error) return res.status(500).send({ message: 'Server is down!', error });
-	});
-	next();
-});
+} catch (error) {
+	logger.error(NAMESPACE, 'logger error');
+}
 
 // Parse the request
 app.use(express.urlencoded({ extended: false }));
@@ -59,11 +64,11 @@ app.use(cors(corsOptions));
 app.use(passport.initialize());
 
 // Routes
-app.use('/user', mongoDbInitValidation, userRoutes);
+app.use('/user', tokenAuthorization, mongoDbInitValidation, userRoutes);
 app.use('/auth', mongoDbInitValidation, authRoutes);
-app.use('/covid', covidCrawlerRoutes);
-app.use('/plagiarism', plagiarismRoutes);
-app.use('/files', mongoDbInitValidation, fileStorageRoutes);
+app.use('/covid', tokenAuthorization, covidCrawlerRoutes);
+app.use('/plagiarism', tokenAuthorization, plagiarismRoutes);
+app.use('/file', mongoDbInitValidation, fileStorageRoutes);
 
 // Rules of API
 app.use((req, res, next) => {
@@ -91,3 +96,17 @@ app.use((req, res, next) => {
 const httpServer = http.createServer(app);
 const { port, hostname } = config.server;
 httpServer.listen({ port: port, host: '0.0.0.0' }, () => logger.info(NAMESPACE, `Server running on ${hostname}:${port}`));
+
+// import countriesCode from './data/countryCode.json';
+// const sorted = countriesCode.sort((a, b) => a.country.localeCompare(b.country));
+// import fs from 'fs';
+// const jsonFile = fs.createWriteStream('sortedCountryCode.json', {
+// 	encoding: 'utf8',
+// 	flags: 'a',
+// });
+
+// jsonFile.write('[\n');
+// sorted.forEach((code) => {
+// 	jsonFile.write(JSON.stringify(code) + ',');
+// });
+// jsonFile.write(']');
