@@ -1,6 +1,4 @@
 import mongoose, { Schema } from 'mongoose';
-import config from '../config/config';
-import jwt from 'jsonwebtoken';
 
 interface IAccountVerification extends Document {
 	userId: string;
@@ -8,7 +6,7 @@ interface IAccountVerification extends Document {
 
 const AccountVerificationSchema: Schema = new Schema(
 	{
-		userId: { type: mongoose.Types.ObjectId, required: true, trim: true, default: null },
+		userId: { type: Schema.Types.ObjectId, required: true, trim: true, default: null },
 	},
 	{
 		_id: true,

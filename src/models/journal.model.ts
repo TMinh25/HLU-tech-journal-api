@@ -18,23 +18,23 @@ const JournalSchema: Schema = new Schema(
 		status: { type: Boolean, required: true, default: false },
 		editors: [
 			{
-				_id: { type: mongoose.Types.ObjectId, required: true },
+				_id: { type: Schema.Types.ObjectId, required: true },
 				name: { type: String, trim: true, required: true },
 			},
 		],
 		contributors: [
 			{
-				_id: { type: mongoose.Types.ObjectId, required: true },
+				_id: { type: Schema.Types.ObjectId, required: true },
 				name: { type: String, required: true },
 				contributes: { type: String },
 			},
 		],
 		createdBy: {
-			_id: { type: mongoose.Types.ObjectId },
+			_id: { type: Schema.Types.ObjectId },
 			displayName: { type: String },
 			at: { type: Date, default: moment().format() },
 		},
-		articles: [mongoose.Types.ObjectId],
+		articles: [Schema.Types.ObjectId],
 	},
 	{
 		_id: true,

@@ -35,7 +35,7 @@ const citationRegex = /\[[0-9][1-9]?\]/g;
  *  Kiểm tra xem giá trị [id] truyền vào có thuộc định dạng của ObjectId trong mongo không
  */
 export const isValidObjectID = (id: string | mongoose.ObjectId | bson.ObjectId | mongo.ObjectId): boolean => {
-	return mongoose.Types.ObjectId.isValid(id.toString());
+	return Schema.Types.ObjectId.isValid(id.toString());
 };
 
 export const firstUppercaseIndex = (str: string): number | null => {

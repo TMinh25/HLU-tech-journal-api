@@ -7,7 +7,7 @@ interface IResetPasswordRequest extends Document {
 
 const ResetPasswordRequestSchema: Schema = new Schema(
 	{
-		userId: { type: mongoose.Types.ObjectId, required: true, trim: true, default: null },
+		userId: { type: Schema.Types.ObjectId, required: true, trim: true, default: null },
 		token: { type: String, required: true, trim: true, default: null },
 	},
 	{

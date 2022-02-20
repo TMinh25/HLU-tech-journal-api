@@ -43,7 +43,7 @@ const uploadFileToStorage = async (dir: string, file: Express.Multer.File, filen
 	});
 };
 
-const uploadFileInfoToDatabase = async (uploadFileResponse: UploadApiResponse, collectionId: mongoose.Types.ObjectId, fileId: mongoose.Types.ObjectId, fileName: string): Promise<IMongoFile> => {
+const uploadFileInfoToDatabase = async (uploadFileResponse: UploadApiResponse, collectionId: Schema.Types.ObjectId, fileId: Schema.Types.ObjectId, fileName: string): Promise<IMongoFile> => {
 	const { url, format } = uploadFileResponse;
 	const file = new MongoFile({
 		_id: fileId,

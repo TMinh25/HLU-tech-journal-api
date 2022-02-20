@@ -129,7 +129,7 @@ const deleteJournal = async (req: Request, res: Response) => {
 	const journalId = req.params._id;
 	const journal = await Journal.findById(journalId).exec();
 	if (!isValidObjectID(journalId)) {
-		return res.status(400).json({ success: false, message: 'Invalid id' });
+		return res.status(400).json({ success: false, message: 'Invalid id 2' });
 	}
 	if (!journal) {
 		return res.status(404).json({ success: false, message: 'Tạp chí không tồn tại' });
@@ -149,7 +149,7 @@ const getJournalById = async (req: Request, res: Response) => {
 	const { _id } = req.params;
 	try {
 		if (!isValidObjectID(_id)) {
-			return res.status(400).json({ success: false, message: 'Invalid id' });
+			return res.status(400).json({ success: false, message: 'Invalid id 3' });
 		}
 		const journal = await Journal.findById(_id).exec();
 		if (!journal) {
@@ -187,7 +187,7 @@ const articleSubmissions = async (req: Request, res: Response) => {
 	logger.debug(NAMESPACE, req.body);
 	const accessToken = getAuthorizationHeaderToken(req);
 	const articleInfo = req.body;
-	const journalId = req.params.journalId;
+	const journalId = req.params._id;
 	try {
 		const user = await verifyAccessToken(accessToken);
 		delete articleInfo.status;
