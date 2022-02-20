@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
+import moment from 'moment';
 import fetch from 'node-fetch';
 import countryCode from '../data/countryCode.json';
 
@@ -17,7 +18,7 @@ const modifyCountryObject = (country: any): object => {
 		totalDeaths: country!.TotalDeaths,
 		newRecovered: country!.NewRecovered,
 		totalRecovered: country!.TotalRecovered,
-		lastUpdated: country!.Date
+		lastUpdated: country!.Date,
 	};
 };
 
@@ -35,12 +36,12 @@ const crawlSummaryData = async (req: Request, res: Response, next: NextFunction)
 	const modifiedData = {
 		total,
 		today,
-		overview
+		overview,
 	};
 
 	res.status(200).json({
 		success: true,
-		data: modifiedData
+		data: modifiedData,
 	});
 };
 
@@ -50,7 +51,7 @@ const crawlVietNamProvinceData = async (req: Request, res: Response, next: NextF
 
 	res.status(200).json({
 		success: true,
-		data: data.locations
+		data: data.locations,
 	});
 };
 
@@ -88,7 +89,7 @@ const crawlCountrySummary = async (req: Request, res: Response, next: NextFuncti
 			totalDeaths: total!.internal!.death,
 			newRecovered: today!.internal!.recovered,
 			totalRecovered: total!.internal!.recovered,
-			lastUpdated: new Date()
+			lastUpdated: moment().format(),
 		};
 	} else {
 		const response = await fetch(covid19API + '/summary');

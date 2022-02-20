@@ -9,6 +9,11 @@ import fs from 'fs';
 import { google } from 'googleapis';
 import path from 'path';
 import { Request } from 'express';
+import IUser from './interfaces/user';
+import jwt, { TokenExpiredError } from 'jsonwebtoken';
+import config from './config/config';
+import logger from './config/logger';
+import User from './models/user.model';
 
 /** Regex của các chữ cái viết hoa (tiếng việt) */
 const vietnameseUpperCaseRegex = /[A-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪỬỮỰỲỴÝỶỸ]/g;
@@ -88,6 +93,31 @@ export const getAuthorizationHeaderToken = (req: Request): string => {
 		return authHeader.split(' ')[1];
 	}
 	return '';
+};
+
+export const verifyAccessToken = (accessToken: string): Promise<IUser> => {
+	return new Promise((resolve, reject) => {
+		jwt.verify(
+			accessToken,
+			config.jwtKey,
+			{
+				algorithms: ['HS512', 'HS256'],
+			},
+			async (error, user) => {
+				if (error) {
+					if (error.name === TokenExpiredError.name) {
+						reject('expired');
+					}
+					reject('error');
+				}
+				if (!user) {
+					return reject('notfound');
+				}
+				const userFound = await User.findOne({ _id: user._id }).exec();
+				resolve(userFound as IUser);
+			},
+		);
+	});
 };
 
 export const dateTimezone = moment.tz(Date.now(), 'Asia/Bangkok');

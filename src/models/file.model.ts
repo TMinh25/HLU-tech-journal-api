@@ -21,4 +21,5 @@ const FileSchema: Schema = new Schema(
 	},
 );
 
-export default mongoose.model<IMongoFile>('File', FileSchema);
+const MongoFile = mongoose.model<IMongoFile>('File', FileSchema);
+export default MongoFile;

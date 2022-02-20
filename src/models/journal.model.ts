@@ -1,0 +1,56 @@
+import mongoose, { Schema, ObjectId } from 'mongoose';
+import moment from 'moment';
+import mongooseUniqueValidator from 'mongoose-unique-validator';
+import IJournal from '../interfaces/journal';
+
+/**	Model `Journal`: tạp chí của cơ sở dữ liệu
+ */
+const JournalSchema: Schema = new Schema(
+	{
+		name: { type: String, trim: true, required: true, unique: true },
+		tags: [{ type: String, trim: true }],
+		description: { type: String, trim: true, default: '' },
+		/**
+		 * Trạng thái của tạp chí:
+		 * true:  Đã xuất bản
+		 * false: Đang xuất bản
+		 */
+		status: { type: Boolean, required: true, default: false },
+		editors: [
+			{
+				_id: { type: mongoose.Types.ObjectId, required: true },
+				name: { type: String, trim: true, required: true },
+			},
+		],
+		contributors: [
+			{
+				_id: { type: mongoose.Types.ObjectId, required: true },
+				name: { type: String, required: true },
+				contributes: { type: String },
+			},
+		],
+		createdBy: {
+			_id: { type: mongoose.Types.ObjectId },
+			displayName: { type: String },
+			at: { type: Date, default: moment().format() },
+		},
+		articles: [mongoose.Types.ObjectId],
+	},
+	{
+		_id: true,
+		timestamps: true,
+		autoIndex: true,
+		toObject: {
+			minimize: false,
+			getters: true,
+		},
+		versionKey: false,
+	},
+);
+
+// add unique plugin for mongoose
+JournalSchema.plugin(mongooseUniqueValidator);
+
+const Journal = mongoose.model<IJournal>('Journal', JournalSchema);
+
+export default Journal;

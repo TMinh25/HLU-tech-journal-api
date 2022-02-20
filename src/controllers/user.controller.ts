@@ -1,27 +1,21 @@
-import { Request, Response, NextFunction } from 'express';
-import User from '../models/user.model';
 import bcrypt from 'bcrypt';
-import mongoose, { Schema } from 'mongoose';
+import crypto from 'crypto';
+import { NextFunction, Request, Response } from 'express';
+import fs from 'fs';
 import jwt, { TokenExpiredError } from 'jsonwebtoken';
+import mongoose, { Schema } from 'mongoose';
 import config from '../config/config';
 import logger from '../config/logger';
-import { getAuthorizationHeaderToken, isValidObjectID } from '../utils';
+import IUser from '../interfaces/user';
+import AccountVerification from '../models/accountVerification.model';
+import RefreshToken from '../models/refreshToken.model';
+import ResetPasswordRequest from '../models/resetPasswordRequest.model';
+import User from '../models/user.model';
+import { getAuthorizationHeaderToken, isValidObjectID, verifyAccessToken } from '../utils';
 
 const NAMESPACE = 'User Controller';
 
-/**	Model `RefreshToken` dùng để thêm refreshToken vào cơ sở dữ liệu
- */
-const RefreshToken = mongoose.model(
-	'Refresh Token',
-	new Schema(
-		{
-			token: { type: String, require: true, trim: true },
-		},
-		{
-			versionKey: false,
-		},
-	),
-);
+const { transporter } = config.emailTransporter;
 
 /** `[GET]/user/`
  * @returns
@@ -33,12 +27,12 @@ const RefreshToken = mongoose.model(
  *
  * [500]: Lỗi mạng hoặc lỗi server
  */
-const getAllUsers = (req: Request, res: Response, next: NextFunction) => {
-	User.find({}, '_id displayName aliases sex degree workPlace nation backgroundInfomation email photoURL')
+const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
+	User.find()
 		.exec()
 		.then((userRes) => {
 			if (userRes.length > 0) {
-				res.status(200).json({ success: true, data: userRes, length: userRes.length });
+				res.status(200).json({ success: true, data: userRes.map((user) => user.userInfomation()), length: userRes.length });
 			} else {
 				res.status(404).json({ success: false, data: null, error: { title: 'Không có người dùng nào trong cơ sở dữ liệu' } });
 			}
@@ -73,13 +67,13 @@ const getUser = (req: Request, res: Response, next: NextFunction) => {
 	if (!isValidObjectID(req.params._id)) {
 		return res.status(400).json({ success: false, title: 'ID người dùng không đúng' });
 	}
-	User.findOne({ _id: req.params._id }, '_id displayName aliases sex degree workPlace nation backgroundInfomation email photoURL')
+	User.findOne({ _id: req.params._id })
 		.exec()
 		.then((userRes) => {
 			if (userRes === null) {
 				res.status(404).json({ success: false, error: { title: 'Không tìm thấy người dùng' } });
 			} else {
-				res.status(200).json({ success: true, data: userRes });
+				res.status(200).json({ success: true, data: userRes.userInfomation() });
 			}
 		})
 		.catch((error) => res.status(500).json({ success: false, error: { title: error.message, error: error } }));
@@ -131,20 +125,40 @@ const getUserAttendedArticle = (req: Request, res: Response, next: NextFunction)
 const findUsers = (req: Request, res: Response, next: NextFunction) => {
 	const { aliases, email, displayName, workPlace } = req.body;
 	// logger.debug(NAMESPACE, 'findUsers', req.body);
-	User.find(
-		{ $or: [{ aliases: RegExp(aliases, 'i') }, { email: email }, { displayName: displayName }, { workPlace: RegExp(workPlace, 'i') }] },
-		'_id displayName aliases sex degree workPlace nation backgroundInfomation email photoURL',
-	)
+	User.find({ $or: [{ aliases: RegExp(aliases, 'i') }, { email: email }, { displayName: displayName }, { workPlace: RegExp(workPlace, 'i') }] })
 		.then((result) => {
 			if (result.length === 0) {
 				return res.status(404).json({ data: null, message: 'No user found', length: 0 });
 			}
-			return res.status(200).json({ data: result, length: result.length });
+			return res.status(200).json({ data: result.map((user) => user.userInfomation()), length: result.length });
 		})
 		.catch((error) => {
 			logger.error(NAMESPACE, error.message, error);
 			return res.status(500);
 		});
+};
+
+// TODO: vô hiệu hóa người dùng bằng _id
+// lấy _id của accessToken đặt làm người vô hiệu hóa
+// nếu role !== 0 thì không thể vô hiệu hóa
+const toggleDisableUser = async (req: Request, res: Response, next: NextFunction) => {
+	const id = req.params._id;
+	const userExists = await User.exists({ _id: id });
+	if (!isValidObjectID(id)) {
+		return res.status(400).json({ success: false, message: 'Invalid id' });
+	} else if (!userExists) {
+	} else {
+		let user = await User.findOne({ _id: id });
+		if (!user) {
+			return res.status(404).json({ success: false, message: 'User does not exists in database' });
+		}
+		try {
+			await user.update({ disabled: !user.disabled }).exec();
+			res.status(200).json({ success: true, message: 'Cập nhật người dùng thành công', data: user });
+		} catch (error: any) {
+			res.status(500).json({ success: false, message: error.message, error });
+		}
+	}
 };
 
 /**	`[DELETE]/user/:_id`
@@ -229,24 +243,19 @@ const getAccessToken = (req: Request, res: Response, next: NextFunction) => {
  */
 const authInfo = async (req: Request, res: Response, next: NextFunction) => {
 	const accessToken = getAuthorizationHeaderToken(req);
-	jwt.verify(
-		accessToken,
-		config.jwtKey,
-		{
-			algorithms: ['HS512', 'HS256'],
-		},
-		(error, user) => {
-			if (error) {
-				if (error.name === TokenExpiredError.name) {
-					logger.error(NAMESPACE, 'jwt expired');
-					return res.status(401).json({ success: false, error: { title: 'Phiên hết hạn', description: 'Hãy đăng nhập lại' } });
-				}
-				logger.error(NAMESPACE, error.name, error);
-				return res.status(401).json({ success: false, error: { title: 'Phiên lỗi', description: 'Hãy đăng nhập lại' } });
-			}
-			return res.status(200).json({ success: true, data: user });
-		},
-	);
+	try {
+		const userFound = await verifyAccessToken(accessToken);
+		const userInformation = userFound?.userInfomation();
+		return res.status(200).json({ success: true, data: userInformation });
+	} catch (error) {
+		if (error === 'expired') {
+			return res.status(401).json({ success: false, error: { title: 'Phiên hết hạn', description: 'Hãy đăng nhập lại' } });
+		} else if (error === 'notfound') {
+			return res.status(404).json({ success: false, error: { title: 'Không thể tìm thấy người dùng' } });
+		} else {
+			return res.status(500);
+		}
+	}
 };
 
 /** `[GET]/auth/signup`
@@ -292,8 +301,34 @@ const signUp = async (req: Request, res: Response, next: NextFunction) => {
 	const user = new User(userInfo);
 	return user
 		.save()
-		.then((result) => {
-			return res.status(201).json({ success: true, data: result });
+		.then((user: IUser) => {
+			const accountVerification = new AccountVerification({ userId: user._id });
+			accountVerification
+				.save()
+				.then((result) => {
+					const serverUrl = config.server.url;
+					transporter.sendMail(
+						{
+							from: email,
+							to: user.email,
+							subject: 'Xác thực tài khoản HLU Tech Journal',
+							html: `<a href="${serverUrl}/auth/verification/${result._id}">xác thực</a>`,
+						},
+						(error, info) => {
+							if (error) {
+								logger.error(NAMESPACE, `Sending mail verification failed!`, error);
+							} else {
+								logger.info(NAMESPACE, `Email verification sent to: ${user.email}`);
+							}
+						},
+					);
+				})
+				.catch((error) => {
+					logger.error(NAMESPACE, error);
+					return res.status(500).json({ success: false, error });
+				});
+
+			return res.status(201).json({ success: true, data: user });
 		})
 		.catch((error) => {
 			logger.error(NAMESPACE, error);
@@ -370,20 +405,146 @@ const signOut = (req: Request, res: Response, next: NextFunction) => {
 	// FIXME: sửa tình trạng double click trong flutter server đẩy lỗi:
 	//  CastError: Cast to ObjectId failed for value "signout" (type string) at path "_id" for model "User"
 	const refreshToken = req.body.refreshToken;
-	RefreshToken.countDocuments({ token: refreshToken }, (error, count) => {
-		if (count > 0) {
-			RefreshToken.deleteMany({ token: refreshToken }, (ok) => {
-				if (!ok) {
-					return res.status(200).json({ success: true, message: 'Đăng xuất thành công' });
-				} else {
-					return res.status(400).json({ success: false, error: { title: 'Không thể đăng xuất' } });
-				}
-			});
-		} else {
-			next();
-			return res.status(403);
-		}
-	});
+	try {
+		RefreshToken.deleteMany({ token: refreshToken }, (ok) => {
+			if (!ok) {
+				return res.status(200).json({ success: true, message: 'Đăng xuất thành công' });
+			} else {
+				return res.status(400).json({ success: false, error: { title: 'Không thể đăng xuất' } });
+			}
+		});
+	} catch (error: any) {
+		logger.error(NAMESPACE, error);
+		res.status(500).json({ success: false, error: { title: 'Không thể đăng xuất' } });
+	}
 };
 
-export default { getAllUsers, getUser, getUserScore: getUserAttendedArticle, findUsers, signIn, getAccessToken, signOut, authInfo, signUp, deleteUser };
+const verifyAccount = async (req: Request, res: Response, next: NextFunction) => {
+	const { verificationId } = req.params;
+	AccountVerification.findByIdAndDelete(verificationId)
+		.exec()
+		.then((accountVerification) => {
+			if (accountVerification) {
+				User.findByIdAndUpdate(accountVerification.userId, { verified: true }, (err, user) => {
+					if (err) {
+						return res.status(500).json({ success: false, error: err });
+					} else {
+						return res.status(200).json({ success: true, message: 'Người dùng đã được xác thực' });
+					}
+				});
+			} else {
+				return res.status(400).json({ success: false, message: 'Hãy yêu cầu xác thực email lại' });
+			}
+		})
+		.catch((error) => {
+			logger.error(NAMESPACE, error);
+			return res.status(500).json({ success: false, error });
+		});
+};
+
+const requestResetPassword = async (req: Request, res: Response, next: NextFunction) => {
+	const { email } = req.body;
+	if (!email) return res.status(400).json({ success: false, message: 'Cung cấp email đã xác thực của bạn' });
+
+	const user = await User.findOne({ email: email });
+	if (!user) return res.status(400).json({ success: false, message: 'Không có tài khoản nào tồn tại với email đã cung cấp' });
+	if (!user.verified) return res.status(400).json({ success: false, message: 'Tài khoản chưa được xác thực!' });
+
+	let resetPasswordRequest = await ResetPasswordRequest.findOne({ userId: user._id });
+	if (!resetPasswordRequest) {
+		resetPasswordRequest = await new ResetPasswordRequest({
+			userId: user._id,
+			token: crypto.randomBytes(32).toString('hex'),
+		}).save();
+	}
+
+	const clientUrl = config.client.url;
+	const link = `${clientUrl}/reset-password/${user._id}/${resetPasswordRequest.token}`;
+
+	transporter.sendMail(
+		{
+			from: email,
+			to: user.email,
+			subject: 'Đặt lại mật khẩu - HLU Tech Journal',
+			html: `<a href="${link}">Đặt lại mật khẩu</a>`,
+			// html: requestPassword.replace('@username', user.displayName).replace('@reset-link', link),
+		},
+		(error, info) => {
+			if (error) {
+				logger.error(NAMESPACE, `Sending reset password request failed!`, error);
+				return res.status(500).json({ success: false, message: 'Đã có lỗi xảy ra! Hãy thử lại' });
+			} else {
+				logger.info(NAMESPACE, `Request reset password sent to: ${user.email}`);
+				return res.status(200).json({ success: true, message: 'Đường dẫn đặt lại mật khẩu đã được gửi đến email của bạn' });
+			}
+		},
+	);
+};
+
+const resetPassword = async (req: Request, res: Response, next: NextFunction) => {
+	try {
+		const { userId, token } = req.params;
+		if (!userId || !token) return res.status(404).json({ success: false, message: 'Đường dẫn không đúng hoặc đã hết hạn' });
+
+		const { password } = req.body;
+		if (!password) return res.status(400).json({ success: false, message: 'Hãy nhập mật khẩu mới' });
+
+		logger.debug(NAMESPACE, { userId, token, password });
+
+		const user = await User.findById(userId);
+		if (!user) return res.status(404).json({ success: false, message: 'Tài khoản không tồn tại!' });
+		if (!user || user.disabled) return res.status(404).json({ success: false, message: 'Tài khoản đã bị khóa!' });
+
+		const resetPasswordRequest = await ResetPasswordRequest.findOne({ userId, token });
+		if (!resetPasswordRequest) return res.status(400).json({ success: false, message: 'Đường dẫn không đúng hoặc đã hết hạn' });
+
+		user.password = bcrypt.hashSync(password, 10);
+		await user.save();
+		await resetPasswordRequest.delete();
+
+		return res.status(200).json({ success: true, message: 'Mật khẩu của bạn đã được thay đổi' });
+	} catch (error) {
+		logger.error(NAMESPACE, error);
+		return res.status(500).json({ success: false, message: 'Đã có lỗi xảy ra!' });
+	}
+};
+
+const isValidResetPassword = async (req: Request, res: Response, next: NextFunction) => {
+	try {
+		const { userId, token } = req.params;
+		if (!userId || !token) return res.status(404).json({ success: false, message: 'Đường dẫn không đúng hoặc đã hết hạn' });
+
+		const { password } = req.body;
+		if (password) return res.status(400).json({ success: false, message: 'Hãy nhập mật khẩu mới' });
+
+		const resetPasswordRequest = await ResetPasswordRequest.findOne({ userId, token });
+		if (!resetPasswordRequest) return res.status(404).json({ success: false, message: 'Đường dẫn không đúng hoặc đã hết hạn' });
+
+		const user = await User.findById(userId);
+		if (!user) return res.status(404).json({ success: false, message: 'Tài khoản không tồn tại!' });
+		if (!user || user.disabled) return res.status(404).json({ success: false, message: 'Tài khoản đã bị khóa!' });
+
+		return res.status(200).json({ success: true, message: 'Đường dẫn đúng' });
+	} catch (error) {
+		logger.error(NAMESPACE, error);
+		return res.status(500).json({ success: false, message: 'Đã có lỗi xảy ra!' });
+	}
+};
+
+export default {
+	getAllUsers,
+	getUser,
+	getUserAttendedArticle,
+	findUsers,
+	signIn,
+	getAccessToken,
+	signOut,
+	authInfo,
+	signUp,
+	toggleDisableUser,
+	deleteUser,
+	verifyAccount,
+	requestResetPassword,
+	resetPassword,
+	isValidResetPassword,
+};

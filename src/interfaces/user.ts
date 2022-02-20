@@ -14,6 +14,7 @@ export default interface IUser extends Document {
 	password: string;
 	photoURL: string;
 	disabled: boolean;
+	verified: boolean;
 	userSetting: Object;
 	attendedArticle: Array<object>;
 	createdAt: Date;

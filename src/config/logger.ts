@@ -1,9 +1,10 @@
 import chalk from 'chalk';
+import moment from 'moment-timezone';
 import config from './config';
 
 // should log timestamp on production enviroment
 const getTimeStamp = (): string => {
-	return chalk.grey(new Date().toTimeString().split(' ')[0]);
+	return chalk.grey(moment().format("LTS"));
 };
 
 const info = (namespace: string, message: any, object?: any): void => {

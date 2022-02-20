@@ -10,8 +10,8 @@ import authRoutes from './routes/auth.routes';
 import covidCrawlerRoutes from './routes/covidCrawler.routes';
 import plagiarismRoutes from './routes/plagiarismCrawler.routes';
 import fileStorageRoutes from './routes/fileStorage.routes';
+import journalRoutes from './routes/journal.routes';
 import { mongoDbInitValidation } from './middlewares/initValidation';
-import path from 'path';
 import { tokenAuthorization } from './middlewares/tokenAuthorization';
 
 const NAMESPACE = 'Server';
@@ -69,6 +69,7 @@ app.use('/auth', mongoDbInitValidation, authRoutes);
 app.use('/covid', tokenAuthorization, covidCrawlerRoutes);
 app.use('/plagiarism', tokenAuthorization, plagiarismRoutes);
 app.use('/file', mongoDbInitValidation, fileStorageRoutes);
+app.use('/journal', tokenAuthorization, mongoDbInitValidation, journalRoutes);
 
 // Rules of API
 app.use((req, res, next) => {

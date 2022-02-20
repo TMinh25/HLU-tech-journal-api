@@ -1,6 +1,5 @@
 import dotenv from 'dotenv';
-import path from 'path';
-import fs from 'fs';
+import nodemailer from 'nodemailer';
 
 dotenv.config();
 
@@ -30,10 +29,12 @@ const MONGO = {
 
 const SERVER_HOSTNAME = process.env.SERVER_HOSTNAME || 'localhost';
 const SERVER_PORT = process.env.PORT || 3000;
+const SERVER_URL = process.env.SERVER_URL || 'http://localhost:3000';
 
 const SERVER = {
 	hostname: SERVER_HOSTNAME,
 	port: SERVER_PORT,
+	url: SERVER_URL,
 };
 
 const JWT_KEY = process.env.JWT_KEY || 'this.is.my.secret';
@@ -50,6 +51,25 @@ const CLOUDINARY = {
 	cloudName: process.env.CLOUDINARY_CLOUD_NAME || 'gr4y',
 };
 
+const transporter = nodemailer.createTransport({
+	service: process.env.MAIL_HOST,
+	secure: false,
+	requireTLS: true,
+	auth: {
+		user: process.env.MAIL_USER,
+		pass: process.env.MAIL_PASS,
+	},
+});
+
+const emailTransporter = {
+	transporter,
+	email: process.env.MAIL_USER,
+};
+
+const client = {
+	url: process.env.CLIENT_URL,
+};
+
 const config = {
 	mongo: MONGO,
 	server: SERVER,
@@ -57,6 +77,8 @@ const config = {
 	streamChat: STREAM_CHAT,
 	cloudinary: CLOUDINARY,
 	enviroment: process.env.NODE_ENV,
+	emailTransporter,
+	client,
 };
 
 export default config;

@@ -7,5 +7,6 @@ userRoutes.get('/', controller.getAllUsers);
 userRoutes.get('/:_id', controller.getUser);
 userRoutes.post('/find', controller.findUsers);
 userRoutes.delete('/:_id', controller.deleteUser);
+userRoutes.patch('/disable/:_id', controller.toggleDisableUser);
 
 export = userRoutes;

@@ -2,14 +2,14 @@ import mongoose, { Schema } from 'mongoose';
 import IUser from '../interfaces/user';
 import jwt from 'jsonwebtoken';
 import config from '../config/config';
-import uniqueValidator from 'mongoose-unique-validator';
+import mongooseUniqueValidator from 'mongoose-unique-validator';
 
 const UserSchema: Schema = new Schema(
 	{
 		/** Họ và tên hiển thị của người dùng */
 		displayName: { type: String, require: true, trim: true, default: null }, // Tên hiển thị
 		/** Bí danh */
-		aliases: { type: String, require: false, trim: true, unique: false },
+		aliases: { type: String, require: false, trim: true, unique: true },
 		/** Giới tính
 		 * ```js
 		 * 0 = "nữ"
@@ -24,7 +24,7 @@ const UserSchema: Schema = new Schema(
 		 * 1 = "người dùng"
 		 * ```
 		 */
-		role: { type: Number, require: true, default: 1 },
+		role: { type: Number, require: true, default: 3 /* 3 là người dùng bình thường */, trim: true, unique: false },
 		/** Bằng cấp */
 		degree: { type: String, require: true, default: null },
 		/** Nơi làm việc */
@@ -40,15 +40,17 @@ const UserSchema: Schema = new Schema(
 		/** Mật khẩu đã mã hóa */
 		password: { type: String, require: true, trim: true, default: null },
 		/** Link ảnh đại diện */
-		photoURL: { type: String, require: false, default: 'https://www.seekpng.com/ipng/u2q8y3o0e6q8q8y3_person-avatar-placeholder/' },
+		photoURL: { type: String, require: false, default: '' },
 		/** Tài khoản người dùng bị khóa */
 		disabled: { type: Boolean, require: true, default: false },
+		/** Tài khoản người dùng đã được xác thực email hay chưa */
+		verified: { type: Boolean, require: true, default: false },
 		/** Cài đặt của người dùng */
 		userSetting: {
 			type: Object,
 			require: false,
 			default: {
-				theme: 'light',
+				theme: 'dark',
 				language: 'vietnam',
 				forReviewer: {
 					acceptingReview: false,
@@ -120,6 +122,7 @@ UserSchema.methods.userInfomation = function (): object {
 };
 
 // add unique plugin for mongoose
-UserSchema.plugin(uniqueValidator);
+UserSchema.plugin(mongooseUniqueValidator);
 
-export default mongoose.model<IUser>('User', UserSchema);
+const User = mongoose.model<IUser>('User', UserSchema);
+export default User;
