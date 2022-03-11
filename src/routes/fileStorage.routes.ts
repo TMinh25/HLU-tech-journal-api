@@ -18,38 +18,17 @@ const upload = multer({
 	},
 });
 
+fileStorageRoutes.get('/:_fileId', controller.getFileById);
 fileStorageRoutes.post(
 	'/upload',
 	(req, res, next) => {
 		const file = new MongoFile();
-		req.params.fileId = file._id;
+		req.params.fileId = String(file._id);
 		// pass the fileId to upload.single to set filename
 		next();
 	}, // get file _id in mongo model
 	upload.single('file'), // upload file to directory
 	controller.uploadFile, // upload file info to mongodb
 );
-
-fileStorageRoutes.post(
-	'/upload/collection/:collectionId',
-	(req, res, next) => {
-		const mimetype = 'application/pdf';
-		if (req.file && req.file.mimetype !== mimetype) {
-			res.status(400).json({ success: false, error: { title: 'Chỉ chấp nhận file pdf' } });
-		}
-		next();
-	},
-	(req, res, next) => {
-		const file = new MongoFile();
-		req.params.fileId = file._id;
-		// pass the fileId to upload.single to set filename
-		next();
-	}, // get file _id in mongo model
-	(req, res, next) => paramsIsValidMongoID(req, res, next, ['collectionId', 'fileId']), // check for valid params
-	upload.single('file'), // upload file to directory
-	controller.uploadFileToCollection, // upload file info to mongodb
-);
-
-fileStorageRoutes.get('/collection/:collectionId', (req, res, next) => paramsIsValidMongoID(req, res, next, ['collectionId']), controller.getAllFilesInCollection);
 
 export = fileStorageRoutes;

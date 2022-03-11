@@ -1,14 +1,13 @@
+import { UploadApiErrorResponse, UploadApiResponse, v2 } from 'cloudinary';
 import { NextFunction, Request, Response } from 'express';
+import mongoose from 'mongoose';
 import path from 'path';
-import MongoFile from '../models/file.model';
+import streamifier from 'streamifier';
 import config from '../config/config';
 import logger from '../config/logger';
-import mongoose from 'mongoose';
 import IMongoFile from '../interfaces/file';
-import { UploadApiErrorResponse, UploadApiResponse, v2 } from 'cloudinary';
-import fs from 'fs';
-import streamifier from 'streamifier';
-import { isValidObjectID } from '../utils';
+import MongoFile from '../models/file.model';
+import { validObjectID } from '../utils';
 
 const NAMESPACE = 'FileStorageController';
 const { cloudName, apiKey, apiSecret } = config.cloudinary;
@@ -43,62 +42,20 @@ const uploadFileToStorage = async (dir: string, file: Express.Multer.File, filen
 	});
 };
 
-const uploadFileInfoToDatabase = async (uploadFileResponse: UploadApiResponse, collectionId: Schema.Types.ObjectId, fileId: Schema.Types.ObjectId, fileName: string): Promise<IMongoFile> => {
+const uploadFileInfoToDatabase = async (uploadFileResponse: UploadApiResponse, collectionId: mongoose.Types.ObjectId, fileId: mongoose.Types.ObjectId, fileName: string): Promise<IMongoFile> => {
 	const { url, format } = uploadFileResponse;
 	const file = new MongoFile({
 		_id: fileId,
 		title: fileName,
 		downloadUri: url,
 		fileType: format,
-		collectionId,
 	});
 	return file.save();
 };
 
-/** `[POST]/files/uploads/collection/:collectionId`
- * Lấy tất cả các file có trong collection
- * @param req.file
- * Chứa file cần lưu vào collection
- * @param req.query.collection
- * chứa id của collection cần thêm file vào
- * @param req.query.article
- * chứa id của bài báo cần cập nhật
- * @returns
- * [200]: Thành công lưu file
- *
- * [409]:
- *
- * [500]:
- */
-const uploadFileToCollection = async (req: Request, res: Response, next: NextFunction) => {
-	try {
-		const { collectionId, fileId } = req.params;
-		const uploadFile = req.file;
-
-		if (!uploadFile) {
-			res.status(400).json({ success: false, message: 'No file uploaded', message_vn: 'Không có file nào được tải lên' });
-		} else if (!fileId) {
-			res.status(400).json({ success: false, message: 'Try again', message_vn: 'Thử lại' });
-		} else {
-			try {
-				const uploadResponse = await uploadFileToStorage(collectionId, uploadFile, fileId);
-				// const responseBody = await uploadResponse.json();
-				logger.debug(NAMESPACE, uploadResponse);
-				const fileSaveResponse = await uploadFileInfoToDatabase(uploadResponse, collectionId, fileId, uploadFile.originalname);
-				return res.status(200).json({ success: true, data: fileSaveResponse });
-			} catch (error) {
-				logger.error(NAMESPACE, error);
-				return res.status(500).json({ success: false, error });
-			}
-		}
-	} catch (error) {
-		logger.error(NAMESPACE, error);
-		res.status(400).json({ success: false, message: 'Error while uploading file. Try again later', message_vn: 'File tải lên bị lỗi, Thử lại sau', error });
-	}
-	res.status(200);
-};
-
 const uploadFile = async (req: Request, res: Response, next: NextFunction) => {
+	console.log(req.file);
+	console.log(req.body);
 	try {
 		const { fileId } = req.params;
 		const uploadedFile = req.file;
@@ -108,8 +65,7 @@ const uploadFile = async (req: Request, res: Response, next: NextFunction) => {
 			res.status(400).json({ success: false, message: 'Try again', message_vn: 'Thử lại' });
 		} else {
 			try {
-				const uploadResponse = await uploadFileToStorage('upload', uploadedFile, fileId);
-				// logger.debug(NAMESPACE, uploadResponse);
+				const uploadResponse = await uploadFileToStorage('', uploadedFile, fileId);
 				const { url, format } = uploadResponse;
 				const file = new MongoFile({
 					_id: fileId,
@@ -129,52 +85,20 @@ const uploadFile = async (req: Request, res: Response, next: NextFunction) => {
 	}
 };
 
-/** `[GET]/files/collection/:collectionId`
- * Lấy tất cả các file có trong collection
- * @param req.file
- * Chứa file cần lưu vào collection
- * @param req.params.collectionId
- * chứa id của collection cần tìm file vào
- * @param req.params.articleId
- * chứa id của bài báo cần tìm
- * @returns
- * [200]: Thành công lưu file
- *
- * [409]:
- *
- * [500]:
- */
-const getAllFilesInCollection = async (req: Request, res: Response, next: NextFunction) => {
-	const { collectionId } = req.params;
+const getFileById = async (req: Request, res: Response) => {
 	try {
-		if (!collectionId || !isValidObjectID(collectionId)) {
-			return res.status(400).json({ success: false, message: 'Invalid ID', message_vn: 'ID không hợp lệ' });
-		} else {
-			MongoFile.find({
-				collectionId: collectionId,
-			})
-				.then((files) => {
-					if (files.length > 0) {
-						return res.status(200).json({ success: true, data: files, length: files.length });
-					} else {
-						return res.status(404).json({ success: false, data: null, message: 'There are no file in the database' });
-					}
-				})
-				.catch((error) =>
-					res.status(500).json({
-						success: false,
-						message: error.message,
-						e: error,
-					}),
-				);
-		}
-	} catch (error: any) {
-		res.status(error.statusCode || 500).json({ success: false, message: error.message, error });
+		const { _fileId } = req.params;
+		if (!validObjectID(_fileId)) return res.status(400).json({ success: false, message: 'Không hợp lệ' });
+		const uploadedFile = await MongoFile.findById(_fileId).exec();
+		if (!uploadedFile) return res.status(404).json({ success: true, message: 'Không có tệp tin' });
+		res.status(200).json({ success: true, data: uploadedFile });
+	} catch (error) {
+		logger.error(NAMESPACE, error);
+		return res.status(500).json({ success: false, error });
 	}
 };
 
 export default {
-	uploadFileToCollection,
-	getAllFilesInCollection,
 	uploadFile,
+	getFileById,
 };

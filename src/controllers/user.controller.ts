@@ -8,10 +8,15 @@ import config from '../config/config';
 import logger from '../config/logger';
 import IUser from '../interfaces/user';
 import AccountVerification from '../models/accountVerification.model';
+import Article from '../models/article.model';
+import Journal from '../models/journal.model';
 import RefreshToken from '../models/refreshToken.model';
 import ResetPasswordRequest from '../models/resetPasswordRequest.model';
 import User from '../models/user.model';
-import { getAuthorizationHeaderToken, isValidObjectID, verifyAccessToken } from '../utils';
+import { Role } from '../types';
+import { getAuthorizationHeaderToken, validObjectID, verifyAccessToken } from '../utils';
+import { StreamChat } from 'stream-chat';
+import { getStreamInstance } from '../app';
 
 const NAMESPACE = 'User Controller';
 
@@ -32,7 +37,11 @@ const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
 		.exec()
 		.then((userRes) => {
 			if (userRes.length > 0) {
-				res.status(200).json({ success: true, data: userRes.map((user) => user.userInfomation()), length: userRes.length });
+				res.status(200).json({
+					success: true,
+					data: userRes.map((user) => user),
+					length: userRes.length,
+				});
 			} else {
 				res.status(404).json({ success: false, data: null, error: { title: 'Không có người dùng nào trong cơ sở dữ liệu' } });
 			}
@@ -64,7 +73,7 @@ const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
  * [500]: Lỗi mạng hoặc lỗi server
  */
 const getUser = (req: Request, res: Response, next: NextFunction) => {
-	if (!isValidObjectID(req.params._id)) {
+	if (!validObjectID(req.params._id)) {
 		return res.status(400).json({ success: false, title: 'ID người dùng không đúng' });
 	}
 	User.findOne({ _id: req.params._id })
@@ -73,39 +82,7 @@ const getUser = (req: Request, res: Response, next: NextFunction) => {
 			if (userRes === null) {
 				res.status(404).json({ success: false, error: { title: 'Không tìm thấy người dùng' } });
 			} else {
-				res.status(200).json({ success: true, data: userRes.userInfomation() });
-			}
-		})
-		.catch((error) => res.status(500).json({ success: false, error: { title: error.message, error: error } }));
-};
-
-/** `[GET]/user/attended/:_id`
- * @param req.params
- * Chứa id của người dùng cần xem điểm
- * @returns
- * Trả về điểm số của người dùng có _id giống với _id truyền vào
- *
- * Kiểm tra _id có hợp lên hay không rồi mới tìm
- *
- * [200]: Người dùng tồn tại và trả về điểm của người dùng
- *
- * [400]: _id truyền vào không hợp lệ
- *
- * [404]: Không tìm thấy người dùng
- *
- * [500]: Lỗi mạng hoặc lỗi server
- */
-const getUserAttendedArticle = (req: Request, res: Response, next: NextFunction) => {
-	if (!isValidObjectID(req.params._id)) {
-		return res.status(400).json({ success: false, error: { title: 'ID không khả dụng' } });
-	}
-	User.findOne({ _id: req.params._id }, 'attendedArticle')
-		.exec()
-		.then((attendedArticle) => {
-			if (attendedArticle === null) {
-				res.status(404).json({ success: false, error: { title: 'Không tìm thấy người dùng' } });
-			} else {
-				res.status(200).json({ success: true, data: attendedArticle });
+				res.status(200).json({ success: true, data: userRes });
 			}
 		})
 		.catch((error) => res.status(500).json({ success: false, error: { title: error.message, error: error } }));
@@ -130,7 +107,7 @@ const findUsers = (req: Request, res: Response, next: NextFunction) => {
 			if (result.length === 0) {
 				return res.status(404).json({ data: null, message: 'No user found', length: 0 });
 			}
-			return res.status(200).json({ data: result.map((user) => user.userInfomation()), length: result.length });
+			return res.status(200).json({ data: result, length: result.length });
 		})
 		.catch((error) => {
 			logger.error(NAMESPACE, error.message, error);
@@ -140,11 +117,11 @@ const findUsers = (req: Request, res: Response, next: NextFunction) => {
 
 // TODO: vô hiệu hóa người dùng bằng _id
 // lấy _id của accessToken đặt làm người vô hiệu hóa
-// nếu role !== 0 thì không thể vô hiệu hóa
+// nếu role !== Role.admin thì không thể vô hiệu hóa
 const toggleDisableUser = async (req: Request, res: Response, next: NextFunction) => {
 	const id = req.params._id;
 	const userExists = await User.exists({ _id: id });
-	if (!isValidObjectID(id)) {
+	if (!validObjectID(id)) {
 		return res.status(400).json({ success: false, message: 'Invalid id' });
 	} else if (!userExists) {
 	} else {
@@ -219,9 +196,9 @@ const getAccessToken = (req: Request, res: Response, next: NextFunction) => {
 				});
 				// Tìm user với _id đã giải mã
 				const user = await User.findOne({ _id: (<any>decoded).data._id }).exec();
+				if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
 				const accessToken = user?.generateAccessToken();
-				const userInfomation = user?.userInfomation();
-				const newRefreshToken = jwt.sign({ data: userInfomation }, config.jwtKey);
+				const newRefreshToken = user.generateRefreshToken();
 				// Cập nhật refreshToken trong cơ sở dữ liệu
 				await RefreshToken.updateOne({ token: oldRefreshToken }, { token: newRefreshToken });
 				return res.status(200).json({ success: true, accessToken, refreshToken: newRefreshToken });
@@ -245,8 +222,11 @@ const authInfo = async (req: Request, res: Response, next: NextFunction) => {
 	const accessToken = getAuthorizationHeaderToken(req);
 	try {
 		const userFound = await verifyAccessToken(accessToken);
-		const userInformation = userFound?.userInfomation();
-		return res.status(200).json({ success: true, data: userInformation });
+		// const userInformation = userFound?.userInfomation();
+		if (!userFound) return res.status(404).json({ success: false, message: 'Không thể lấy dữ liệu từ phiên' });
+		if (userFound.disabled) return res.status(401).json({ success: false, data: null, message: 'Tài khoản của bạn đã bị vô hiệu hóa' });
+		logger.info(NAMESPACE, userFound);
+		return res.status(200).json({ success: true, data: userFound });
 	} catch (error) {
 		if (error === 'expired') {
 			return res.status(401).json({ success: false, error: { title: 'Phiên hết hạn', description: 'Hãy đăng nhập lại' } });
@@ -299,6 +279,8 @@ const signUp = async (req: Request, res: Response, next: NextFunction) => {
 	req.body.password = bcrypt.hashSync(req.body.password, 10);
 	const userInfo = req.body;
 	const user = new User(userInfo);
+	const streamToken = getStreamInstance.createToken(user._id.toString());
+	user.streamToken = streamToken;
 	return user
 		.save()
 		.then((user: IUser) => {
@@ -335,7 +317,9 @@ const signUp = async (req: Request, res: Response, next: NextFunction) => {
 			if (error.name === 'ValidationError') {
 				return res.status(500).json({
 					success: false,
-					error: { title: 'Thông tin trùng lặp tồn tại trong cơ sở dữ liệu', ...error },
+					message: 'Thông tin trùng lặp tồn tại trong cơ sở dữ liệu',
+					code: 'uniqueValidator',
+					error: Object.fromEntries(Object.entries(error.errors).map(([k, v]) => [k, true])),
 				});
 			}
 			return res.status(500).json({
@@ -372,20 +356,21 @@ const signIn = async (req: Request, res: Response, next: NextFunction) => {
 		if (!user) {
 			return res.status(404).json({ authenticated: false, error: { title: 'Tài khoản không tồn tại!', description: 'Hãy đăng nhập bằng tài khoản khác' } });
 		}
+		if (!user.password) return res.status(500).json({ authenticated: false, message: 'Lỗi hệ thống!' });
 		if (!bcrypt.compareSync(password, user.password)) {
 			return res.status(401).json({ authenticated: false, error: { title: 'Mật khẩu của tài khoản không đúng', description: 'Hãy nhập mật khẩu đúng' } });
 		}
 		if (user.disabled) {
 			return res.status(401).json({ authenticated: false, error: { title: 'Tài khoản này hiện tại đang bị khóa' } });
 		}
-		const accessToken = user?.generateAccessToken();
-		// get refreshToken with userInfomation
-		const userInfomation = user?.userInfomation();
-		const refreshToken = jwt.sign({ data: userInfomation }, config.jwtKey);
+		const accessToken = user.generateAccessToken();
+		// get refreshToken with userInfomation/
+		const refreshToken = user.generateRefreshToken();
 		// update refreshToken inside database
 		await RefreshToken.findOneAndUpdate({ _id: user._id }, { token: refreshToken }, { new: true, upsert: true });
 		res.status(200).json({ authenticated: true, accessToken, refreshToken });
 	} catch (error) {
+		logger.error(NAMESPACE, error);
 		res.status(500).json({ authenticated: false, error });
 	}
 };
@@ -463,7 +448,6 @@ const requestResetPassword = async (req: Request, res: Response, next: NextFunct
 
 	transporter.sendMail(
 		{
-			from: email,
 			to: user.email,
 			subject: 'Đặt lại mật khẩu - HLU Tech Journal',
 			html: `<a href="${link}">Đặt lại mật khẩu</a>`,
@@ -534,7 +518,6 @@ const isValidResetPassword = async (req: Request, res: Response, next: NextFunct
 export default {
 	getAllUsers,
 	getUser,
-	getUserAttendedArticle,
 	findUsers,
 	signIn,
 	getAccessToken,

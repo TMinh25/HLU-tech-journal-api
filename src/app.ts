@@ -13,6 +13,9 @@ import fileStorageRoutes from './routes/fileStorage.routes';
 import journalRoutes from './routes/journal.routes';
 import { mongoDbInitValidation } from './middlewares/initValidation';
 import { tokenAuthorization } from './middlewares/tokenAuthorization';
+import journalGroupRoutes from './routes/journalGroup.routes';
+import articleRoutes from './routes/article.routes';
+import { StreamChat } from 'stream-chat';
 
 const NAMESPACE = 'Server';
 const app = express();
@@ -31,6 +34,9 @@ export default mongoose
 if (config.enviroment === 'development') {
 	mongoose.set('debug', false);
 }
+
+/** GetStream server instance */
+export const getStreamInstance = StreamChat.getInstance(config.streamChat.key, config.streamChat.secret);
 
 // Logging the request
 try {
@@ -66,10 +72,12 @@ app.use(passport.initialize());
 // Routes
 app.use('/user', tokenAuthorization, mongoDbInitValidation, userRoutes);
 app.use('/auth', mongoDbInitValidation, authRoutes);
-app.use('/covid', tokenAuthorization, covidCrawlerRoutes);
+// app.use('/covid', tokenAuthorization, covidCrawlerRoutes);
 app.use('/plagiarism', tokenAuthorization, plagiarismRoutes);
 app.use('/file', mongoDbInitValidation, fileStorageRoutes);
-app.use('/journal', tokenAuthorization, mongoDbInitValidation, journalRoutes);
+app.use('/article', mongoDbInitValidation, articleRoutes);
+app.use('/journal', mongoDbInitValidation, journalRoutes);
+app.use('/journal-group', mongoDbInitValidation, journalGroupRoutes);
 
 // Rules of API
 app.use((req, res, next) => {
@@ -97,17 +105,3 @@ app.use((req, res, next) => {
 const httpServer = http.createServer(app);
 const { port, hostname } = config.server;
 httpServer.listen({ port: port, host: '0.0.0.0' }, () => logger.info(NAMESPACE, `Server running on ${hostname}:${port}`));
-
-// import countriesCode from './data/countryCode.json';
-// const sorted = countriesCode.sort((a, b) => a.country.localeCompare(b.country));
-// import fs from 'fs';
-// const jsonFile = fs.createWriteStream('sortedCountryCode.json', {
-// 	encoding: 'utf8',
-// 	flags: 'a',
-// });
-
-// jsonFile.write('[\n');
-// sorted.forEach((code) => {
-// 	jsonFile.write(JSON.stringify(code) + ',');
-// });
-// jsonFile.write(']');

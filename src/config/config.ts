@@ -40,8 +40,8 @@ const SERVER = {
 const JWT_KEY = process.env.JWT_KEY || 'this.is.my.secret';
 
 const STREAM_CHAT = {
-	apiKey: process.env.STREAM_CHAT_API_KEY || 'wfkg5ysm9qcp',
-	apiSecret: process.env.STREAM_CHAT_API_SECRET || 'NguyenTruongMinh735568',
+	key: process.env.STREAM_KEY || 'wfkg5ysm9qcp',
+	secret: process.env.STREAM_SECRET || '',
 };
 
 const CLOUDINARY = {
@@ -55,6 +55,7 @@ const transporter = nodemailer.createTransport({
 	service: process.env.MAIL_HOST,
 	secure: false,
 	requireTLS: true,
+	from: `UHL Tech Journal <${process.env.MAIL_USER}>`,
 	auth: {
 		user: process.env.MAIL_USER,
 		pass: process.env.MAIL_PASS,

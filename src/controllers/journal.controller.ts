@@ -1,10 +1,13 @@
-import { NextFunction, Request, Response, ErrorRequestHandler } from 'express';
-import Journal from '../models/journal.model';
-import { getAuthorizationHeaderToken, isValidObjectID, verifyAccessToken } from '../utils';
-import jwt, { TokenExpiredError } from 'jsonwebtoken';
+import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import logger from '../config/logger';
-import config from '../config/config';
 import Article from '../models/article.model';
+import Journal from '../models/journal.model';
+import JournalGroup from '../models/journalGroup.model';
+import User from '../models/user.model';
+import { AttendedRole } from '../types';
+import { getAuthorizationHeaderToken, validObjectID, verifyAccessToken } from '../utils';
+import notiController from './notification.controller';
 
 const NAMESPACE = 'Journal Controller';
 
@@ -32,10 +35,10 @@ const getRecentlyPublishedJournal = async (req: Request, res: Response) => {
 	try {
 		const journalRes = await Journal.find({ status: true }).exec();
 		if (journalRes.length > 0) {
-			const recenylyPublishedJournals = journalRes.slice(Math.max(journalRes.length - 5, 0));
-			res.status(200).json({ success: true, data: recenylyPublishedJournals, length: recenylyPublishedJournals.length });
+			const recenylyPublishedJournals = journalRes[journalRes.length - 1];
+			res.status(200).json({ success: true, data: recenylyPublishedJournals });
 		} else {
-			return res.status(404).json({ success: false, data: null, error: { title: 'Không có tạp chí nào mới được xuất bản' } });
+			return res.status(404).json({ success: false, data: null, message: 'Không có tạp chí nào mới được xuất bản' });
 		}
 	} catch (error: any) {
 		logger.error(NAMESPACE, error);
@@ -90,12 +93,19 @@ const getAllPublishedJournal = async (req: Request, res: Response) => {
 };
 
 const createNewJournal = async (req: Request, res: Response) => {
-	// req.body;
+	const { _journalGroupId } = req.params;
+	if (!validObjectID(_journalGroupId)) {
+		return res.status(400).json({ success: false, error: { title: 'Invalid ID' } });
+	}
 	const accessToken = getAuthorizationHeaderToken(req);
 	try {
 		const user = await verifyAccessToken(accessToken);
 		delete req.body.status;
-		const journal = new Journal({ ...req.body, createdBy: user });
+		const journalGroup = await JournalGroup.findById(_journalGroupId).exec();
+		if (!journalGroup) {
+			return res.status(400).json({ success: false, message: 'Chuyên san không tồn tại' });
+		}
+		const journal = new Journal({ ...req.body, createdBy: user, journalGroup: journalGroup });
 		logger.debug(NAMESPACE, req.body);
 		try {
 			await journal.save();
@@ -103,9 +113,11 @@ const createNewJournal = async (req: Request, res: Response) => {
 		} catch (error: any) {
 			logger.error(NAMESPACE, error);
 			if (error.name === 'ValidationError') {
-				return res.status(500).json({
+				return res.status(400).json({
 					success: false,
-					error: { title: 'Thông tin trùng lặp tồn tại trong cơ sở dữ liệu', ...error },
+					message: 'Thông tin trùng lặp trong cơ sở dữ liệu',
+					code: 'uniqueValidator',
+					error: Object.fromEntries(Object.entries(error.errors).map(([k, v]) => [k, true])),
 				});
 			}
 			return res.status(500).json({
@@ -128,8 +140,8 @@ const createNewJournal = async (req: Request, res: Response) => {
 const deleteJournal = async (req: Request, res: Response) => {
 	const journalId = req.params._id;
 	const journal = await Journal.findById(journalId).exec();
-	if (!isValidObjectID(journalId)) {
-		return res.status(400).json({ success: false, message: 'Invalid id 2' });
+	if (!validObjectID(journalId)) {
+		return res.status(400).json({ success: false, message: 'Invalid ID' });
 	}
 	if (!journal) {
 		return res.status(404).json({ success: false, message: 'Tạp chí không tồn tại' });
@@ -148,7 +160,7 @@ const deleteJournal = async (req: Request, res: Response) => {
 const getJournalById = async (req: Request, res: Response) => {
 	const { _id } = req.params;
 	try {
-		if (!isValidObjectID(_id)) {
+		if (!validObjectID(_id)) {
 			return res.status(400).json({ success: false, message: 'Invalid id 3' });
 		}
 		const journal = await Journal.findById(_id).exec();
@@ -184,22 +196,60 @@ const findJournals = async (req: Request, res: Response) => {
 };
 
 const articleSubmissions = async (req: Request, res: Response) => {
-	logger.debug(NAMESPACE, req.body);
 	const accessToken = getAuthorizationHeaderToken(req);
 	const articleInfo = req.body;
 	const journalId = req.params._id;
+	if (!validObjectID(journalId)) {
+		return res.status(400).json({ success: false, message: 'ID không hợp lệ' });
+	}
 	try {
-		const user = await verifyAccessToken(accessToken);
-		delete articleInfo.status;
-		const newSubmission = new Article({ articleInfo });
-		newSubmission.authors.main = user._id;
 		const journal = await Journal.findById(journalId).exec();
 		if (!journal) {
 			return res.status(404).json({ success: false, message: 'Tạp chí không tồn tại' });
 		}
+		const user = await verifyAccessToken(accessToken);
+		delete articleInfo.status;
+		delete articleInfo.files;
+		delete articleInfo.reviewer;
+		const newSubmission = new Article(articleInfo);
+		newSubmission.authors.main = {
+			_id: user._id,
+			displayName: user.displayName,
+			email: user.email,
+			workPlace: user.workPlace,
+			backgroundInfomation: user.backgroundInfomation,
+			photoURL: user.photoURL,
+		};
+		newSubmission.journal = { _id: journal._id, name: journal.name };
+		newSubmission.journalGroup = journal.journalGroup;
+		newSubmission.files?.push(articleInfo.detail.submission.file);
+		newSubmission.files?.push(...articleInfo.detail.submission.helperFiles);
+		newSubmission.currentFile = articleInfo.detail.submission.file;
 		journal.articles.push(newSubmission._id);
-		await journal.save();
-		res.status(201).json({ success: true, data: newSubmission });
+		try {
+			const [newSubmissionData, journalData, notiData] = await Promise.all([newSubmission.save(), journal.save(), notiController.newArticleSubmission(newSubmission)]);
+			return res.status(201).json({ success: true, data: newSubmissionData });
+		} catch (error: any) {
+			logger.error(NAMESPACE, error);
+			if (error.name === 'ValidationError') {
+				if (error.kind === 'unique') {
+					return res.status(400).json({
+						success: false,
+						message: 'Thông tin trùng lặp trong cơ sở dữ liệu',
+						code: 'uniqueValidator',
+						error: Object.fromEntries(Object.entries(error.errors).map(([k, v]) => [k, true])),
+					});
+				} else if (error.kind === 'required') {
+					return res.status(400).json({
+						success: false,
+						message: 'Thông tin cần nhập bị thiếu',
+						code: 'requiredValidator',
+						error: Object.fromEntries(Object.entries(error.errors).map(([k, v]) => [k, true])),
+					});
+				}
+			}
+			return res.status(500).json({ success: false, error });
+		}
 	} catch (error) {
 		if (error === 'expired') {
 			return res.status(401).json({ success: false, error: { title: 'Phiên hết hạn', description: 'Hãy đăng nhập lại' } });
@@ -209,6 +259,30 @@ const articleSubmissions = async (req: Request, res: Response) => {
 			logger.error(NAMESPACE, error);
 			return res.status(500);
 		}
+	}
+};
+
+const getAllArticlesOfJournal = async (req: Request, res: Response) => {
+	const { _id } = req.params;
+	try {
+		const journal = await Journal.findById(_id);
+		if (!journal) {
+			return res.status(404).json({ success: false, message: 'Tạp chí không tồn tại' });
+		}
+		// dùng Promise all để đợi tìm tất cả các article qua articles.map()
+		const articles = await Promise.all(
+			journal.articles.map(async (articleId: mongoose.Types.ObjectId) => {
+				const article = await Article.findById(articleId).exec();
+				console.log(article);
+				console.log(article?.toObject());
+				return article?.toObject();
+			}),
+		);
+		const data = articles.filter((article) => Boolean(article));
+		logger.debug(NAMESPACE, articles);
+		return res.status(200).json({ success: true, data, length: data.length });
+	} catch (error) {
+		logger.error(NAMESPACE, error);
 	}
 };
 
@@ -222,4 +296,5 @@ export default {
 	deleteJournal,
 	findJournals,
 	articleSubmissions,
+	getAllArticlesOfJournal,
 };

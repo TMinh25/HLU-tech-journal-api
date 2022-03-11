@@ -1,15 +1,15 @@
 import { NextFunction, Request, Response } from 'express';
-import { isValidObjectID } from '../utils';
+import { validObjectID } from '../utils';
 
 export const paramsIsValidMongoID = (req: Request, res: Response, next: NextFunction, params: string[]) => {
-	const everyParamsIsValid = params.every((param) => isValidObjectID(req.params[param]));
+	const everyParamsIsValid = params.every((param) => validObjectID(req.params[param]));
 
 	if (everyParamsIsValid) {
 		next();
 	} else {
 		var invalidParams: string[] = [];
 		params.forEach((param) => {
-			if (!isValidObjectID(req.params[param])) {
+			if (!validObjectID(req.params[param])) {
 				invalidParams.push(param);
 			}
 		});

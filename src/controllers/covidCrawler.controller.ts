@@ -97,7 +97,7 @@ const crawlCountrySummary = async (req: Request, res: Response, next: NextFuncti
 		const countries: Array<any> = data.Countries;
 
 		// find country with slug in countries data
-		let countryData = countries.filter((country) => country.Slug == countrySlug)[0];
+		let countryData = countries.filter((country) => country.slug == countrySlug)[0];
 
 		// object modifying
 		countryData = modifyCountryObject(countryData);
