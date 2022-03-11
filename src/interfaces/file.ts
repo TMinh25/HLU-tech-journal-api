@@ -1,9 +1,9 @@
-import { Document } from 'mongoose';
+import { Document, ObjectId } from 'mongoose';
 
 export default interface IMongoFile extends Document {
+	_id: string;
 	title: string;
-	collectionId: string;
-	description: string;
 	downloadUri: string;
 	fileType: string;
+	createdAt: Date;
 }

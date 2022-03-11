@@ -1,18 +1,12 @@
-import mongoose from 'mongoose';
-import mongo from 'mongodb';
 import bson from 'bson';
-
-import moment from 'moment-timezone';
-import { stringify } from 'querystring';
-import { Files } from 'formidable';
-import fs from 'fs';
-import { google } from 'googleapis';
-import path from 'path';
 import { Request } from 'express';
-import IUser from './interfaces/user';
 import jwt, { TokenExpiredError } from 'jsonwebtoken';
+import moment from 'moment-timezone';
+import mongo from 'mongodb';
+import mongoose from 'mongoose';
+import path from 'path';
 import config from './config/config';
-import logger from './config/logger';
+import IUser from './interfaces/user';
 import User from './models/user.model';
 
 /** Regex của các chữ cái viết hoa (tiếng việt) */
@@ -34,8 +28,8 @@ const citationRegex = /\[[0-9][1-9]?\]/g;
 /**
  *  Kiểm tra xem giá trị [id] truyền vào có thuộc định dạng của ObjectId trong mongo không
  */
-export const isValidObjectID = (id: string | mongoose.ObjectId | bson.ObjectId | mongo.ObjectId): boolean => {
-	return Schema.Types.ObjectId.isValid(id.toString());
+export const validObjectID = (id: string | mongoose.ObjectId | bson.ObjectId | mongo.ObjectId): boolean => {
+	return mongoose.Types.ObjectId.isValid(id.toString());
 };
 
 export const firstUppercaseIndex = (str: string): number | null => {

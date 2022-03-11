@@ -3,6 +3,6 @@ import controller from '../controllers/plagiarismCrawler.controller';
 
 const plagiarismRoutes = express.Router();
 
-plagiarismRoutes.get('/', controller.crawlPlagium);
+plagiarismRoutes.post('/', controller.crawlPlagium);
 
 export = plagiarismRoutes;

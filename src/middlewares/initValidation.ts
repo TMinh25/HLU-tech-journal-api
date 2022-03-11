@@ -7,10 +7,7 @@ const mongoDbInitValidation = (req: Request, res: Response, next: NextFunction) 
 			return res.status(500).json({
 				success: false,
 				readyState: 'disconnected',
-				error: {
-					title: 'Mất kết nối với cơ sở dữ liệu!',
-					description: 'MongoDB đã ngắt kết nối, thử lại sau khi MongoDB được kết nối',
-				},
+				message: 'Mất kết nối với cơ sở dữ liệu!',
 			});
 		case 1:
 			return next();
@@ -18,19 +15,13 @@ const mongoDbInitValidation = (req: Request, res: Response, next: NextFunction) 
 			return res.status(500).json({
 				success: false,
 				readyState: 'connecting',
-				error: {
-					title: 'Đang kết nối cơ sở dữ liệu!',
-					description: 'MongoDB đang kết nối',
-				},
+				message: 'Đang kết nối cơ sở dữ liệu!',
 			});
 		case 3:
 			return res.status(500).json({
 				success: false,
 				readyState: 'disconnecting',
-				error: {
-					title: 'Đang ngắt kết nối cơ sở dữ liệu!',
-					description: 'MongoDB đang ngắt kết nối, hãy thử lại',
-				},
+				message: 'Đang ngắt kết nối cơ sở dữ liệu!',
 			});
 		default:
 			// pass to next function

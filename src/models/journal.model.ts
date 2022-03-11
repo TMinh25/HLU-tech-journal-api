@@ -8,6 +8,7 @@ import IJournal from '../interfaces/journal';
 const JournalSchema: Schema = new Schema(
 	{
 		name: { type: String, trim: true, required: true, unique: true },
+		journalGroup: { _id: { type: Schema.Types.ObjectId, required: true }, name: String },
 		tags: [{ type: String, trim: true }],
 		description: { type: String, trim: true, default: '' },
 		/**
@@ -20,6 +21,7 @@ const JournalSchema: Schema = new Schema(
 			{
 				_id: { type: Schema.Types.ObjectId, required: true },
 				name: { type: String, trim: true, required: true },
+				photoURL: { type: String, trim: true, required: false },
 			},
 		],
 		contributors: [
@@ -35,6 +37,7 @@ const JournalSchema: Schema = new Schema(
 			at: { type: Date, default: moment().format() },
 		},
 		articles: [Schema.Types.ObjectId],
+		publishedAt: { type: Date },
 	},
 	{
 		_id: true,
