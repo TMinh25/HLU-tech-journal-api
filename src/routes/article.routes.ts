@@ -16,6 +16,8 @@ articleRoutes.post('/:_id/submission/:_roundId/review/result', controller.review
 articleRoutes.post('/:_id/submission/:_roundId/review/confirm', controller.confirmedSubmittedResult);
 articleRoutes.post('/:_id/submission/publishing', controller.publishingArticle);
 articleRoutes.post('/:_id/submission/completed', controller.completeArticle);
+articleRoutes.post('/:_id/revision/request', controller.requestRevision);
+articleRoutes.post('/:_id/revision/response/:_revisionId', controller.responseRevision);
 articleRoutes.patch('/:_id/submission/visible', controller.toggleVisibleArticle);
 
 export = articleRoutes;

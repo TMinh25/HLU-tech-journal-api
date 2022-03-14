@@ -17,7 +17,18 @@ export default interface IUser extends Document {
 	photoURL: string;
 	disabled: boolean;
 	verified: boolean;
-	userSetting: Object;
+	userSetting: {
+		theme: 'dark';
+		language: 'vietnam';
+		forReviewer: {
+			acceptingReview: false;
+			reviewField: string[];
+		};
+		forReader: {
+			acceptingEmail: true;
+			acceptingNotification: true;
+		};
+	};
 	createdAt: Date;
 	updatedAt: Date;
 

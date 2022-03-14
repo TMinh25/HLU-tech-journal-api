@@ -35,8 +35,11 @@ export const tokenAuthorization = async (req: Request, res: Response, next: Next
 	} else {
 		return res.status(401).json({
 			success: false,
-			message_vn: 'Truyền token vào trong Request Header - Authorization: "Bearer {token}"',
-			message: 'Pass token to Request Header - Authorization: "Bearer {token}"',
+			message: 'Bạn chưa đăng nhập',
+			description: {
+				es: 'Truyền token vào trong Request Header - Authorization: "Bearer {token}"',
+				vn: 'Pass token to Request Header - Authorization: "Bearer {token}"',
+			},
 		});
 	}
 };

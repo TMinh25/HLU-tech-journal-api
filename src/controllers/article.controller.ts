@@ -8,8 +8,11 @@ import { ArticleStatus, AttendedRole, ReviewStatus } from '../types';
 import { getAuthorizationHeaderToken, validObjectID, verifyAccessToken } from '../utils';
 import notificationController from './notification.controller';
 import mongoose from 'mongoose';
+import { json } from 'body-parser';
+import config from '../config/config';
 
 const NAMESPACE = 'Article Controller';
+const { transporter } = config.emailTransporter;
 
 const getAllArticles = async (req: Request, res: Response) => {
 	const accessToken = getAuthorizationHeaderToken(req);
@@ -98,13 +101,22 @@ const submissionResponse = async (req: Request, res: Response) => {
 	const accessToken = getAuthorizationHeaderToken(req);
 	if (!validObjectID(_id)) return res.status(400).json({ success: false, message: 'Invalid ID' });
 	try {
-		const editor = await verifyAccessToken(accessToken);
 		const submission = await Article.findById(_id).exec();
 		if (!submission) return res.status(404).json({ success: false, message: 'Bản thảo không tồn tại' });
+		const author = await User.findById(submission.authors.main._id).exec();
 		if (Boolean(Number(accept))) {
-			const author = await User.findById(submission.authors.main._id).exec();
 			submission.status = ArticleStatus.review;
 			submission.contributors?.push();
+			transporter.sendMail({
+				to: author?.email,
+				subject: 'Bài báo của bạn đã được chấp nhận!',
+				html: `
+				<p>Bài báo ${submission.title} của bạn đã được chấp nhận bởi biên tập viên và bắt đầu quá trình đánh giá bản thảo</p>
+				<p>Bạn có thể theo dõi tiến trình đánh giá tại trang cá nhân của bạn hoặc qua đường dẫn sau: 
+					<a href="${config.client.url}/author/article/${submission._id}">Chi tiết</a>
+				</p>`,
+				// html: requestPassword.replace('@username', user.displayName).replace('@reset-link', link),
+			});
 		} else {
 			submission.status = ArticleStatus.reject;
 			submission.detail.reject = {
@@ -112,6 +124,17 @@ const submissionResponse = async (req: Request, res: Response) => {
 				notes,
 			};
 			submission.detail.review.filter((r) => r.status === ReviewStatus.reviewing || r.status === ReviewStatus.request).forEach((r) => (r.status = ReviewStatus.unassigned));
+			transporter.sendMail({
+				to: author?.email,
+				subject: 'Bài báo của bạn đã bị từ chối biên tập!',
+				html: `
+				<p>Bài báo ${submission.title} của bạn đã bị từ chối bởi biên tập viên của hệ thống</p>
+				<p>Với lí do: ${reason}</p>
+				<p>Ghi chú: ${notes}</p>
+				<br>
+				<p><a href="${config.client.url}/author/article/${submission._id}">Chi tiết</a></p>`,
+				// html: requestPassword.replace('@username', user.displayName).replace('@reset-link', link),
+			});
 		}
 		const data = await submission.save();
 		res.status(200).json({ success: true, data });
@@ -138,7 +161,13 @@ const requestReviewer = async (req: Request, res: Response) => {
 			members: [reviewer, editor._id],
 		});
 		submission.detail?.review.push({ ...{ importantDates, reviewer, displayFile, files, guideLines }, editor: editor._id, status: ReviewStatus.request });
-		await notificationController.submissionSentToReviewer(submission, requestedReviewer);
+		const userReviewer = await User.findById(reviewer).exec();
+		/** Gửi mail cho phản biện */
+		transporter.sendMail({
+			to: userReviewer?.email,
+			subject: `Bạn được mời làm phản biện một bài báo`,
+			html: `<p>Bản thảo <i>${submission.title}</i> đã được giao cho bạn để đánh giá. </p><a href="${config.client.url}/reviewer/article/${submission._id}">Hãy vào hệ thống để xem thông tin</a>`,
+		});
 		const result = await submission.save();
 		res.status(200).json({ success: true, message: 'Bản thảo đã được gửi đến phản biện', data: result });
 	} catch (error) {
@@ -154,10 +183,10 @@ const unassignReviewStage = async (req: Request, res: Response) => {
 		const submission = await Article.findById(_id).exec();
 		if (!submission) return res.status(404).json({ success: false, message: 'Bản thảo không tồn tại' });
 		const index = submission.detail.review.findIndex((r) => r._id!.toString() === _roundId);
-		if (index === -1) return res.status(404).json({ success: false, message: 'Vòng phản biện không tồn tại' });
+		if (index === -1) return res.status(404).json({ success: false, message: 'Đánh giá không tồn tại' });
 		submission.detail.review[index].status = ReviewStatus.unassigned;
 		const result = await submission.save();
-		res.status(200).json({ success: true, message: 'Vòng phản biện đã được gỡ', data: result });
+		res.status(200).json({ success: true, message: 'Đánh giá đã được gỡ', data: result });
 	} catch (error) {
 		logger.error(NAMESPACE, error);
 		res.status(500).json({ success: false, error });
@@ -167,6 +196,7 @@ const unassignReviewStage = async (req: Request, res: Response) => {
 const reviewerResponse = async (req: Request, res: Response) => {
 	const { _id, _roundId } = req.params;
 	const { status } = req.query;
+	const { reason, notes } = req.body;
 	if (!status) return res.status(400).json({ success: false, message: 'Chưa đủ dữ liệu' });
 	const accessToken = getAuthorizationHeaderToken(req);
 	if (!validObjectID(_id) || !validObjectID(_roundId)) return res.status(400).json({ success: false, message: 'Invalid ID' });
@@ -180,10 +210,10 @@ const reviewerResponse = async (req: Request, res: Response) => {
 		// nullish assignment
 		if (status == 'accept') {
 			submission.detail.review.at(index)!.status = ReviewStatus.reviewing;
-			await notificationController.reviewerAcceptSubmission(submission, user);
 		} else if (status == 'reject') {
 			submission.detail.review.at(index)!.status = ReviewStatus.requestRejected;
-			await notificationController.reviewerRejectSubmission(submission, user);
+			submission.detail.review.at(index)!.reject!.reason = reason?.toString() || '';
+			submission.detail.review.at(index)!.reject!.notes = notes?.toString() || '';
 		}
 		await submission.save();
 		res.status(200).json({ success: true, message: 'Cảm ơn phản hồi của bạn!' });
@@ -225,11 +255,22 @@ const confirmedSubmittedResult = async (req: Request, res: Response) => {
 		if (!submission) return res.status(404).json({ success: false, message: 'Bản thảo không tồn tại' });
 		const index = submission.detail.review.findIndex((r) => r._id!.toString() === _roundId);
 		if (index === -1) return res.status(404).json({ success: false, message: 'Đánh giá không tồn tại!' });
+		const reviewer = await User.findById(submission.detail.review.at(index)!.reviewer).exec();
 		// nullish assignment
 		if (!!Number(confirm)) {
 			submission.detail.review.at(index)!.status = ReviewStatus.confirmed;
+			transporter.sendMail({
+				to: reviewer?.email,
+				subject: `Đánh giá đã được chấp nhận`,
+				html: `<p>Đánh giá của bạn đã được xem xét và chấp nhận bởi ban biên tập</p>`,
+			});
 		} else {
 			submission.detail.review.at(index)!.status = ReviewStatus.denied;
+			transporter.sendMail({
+				to: reviewer?.email,
+				subject: `Đánh giá đã bị từ chối`,
+				html: `<p>Cảm ơn bạn đã hỗ trợ chúng tôi trong quá trình đánh giá bản thảo. </p><p>Tuy nhiên chúng tôi thấy rằng đánh giá của bạn vẫn chưa phù hợp với yêu cầu của chúng tôi. Vì vậy đánh giá của bạn đã bị từ chối và tác giả sẽ không có khả năng xem xét đánh giá của bạn</p>`,
+			});
 		}
 		await submission.save();
 		res.status(200).json({ success: true, message: `Đã ${!!Number(confirm) ? 'chấp nhận' : 'từ chối'} đánh giá của phản biện!` });
@@ -257,6 +298,80 @@ const publishingArticle = async (req: Request, res: Response) => {
 	}
 };
 
+const requestRevision = async (req: Request, res: Response) => {
+	const { _id } = req.params;
+	const { text, files } = req.body;
+	if (!validObjectID(_id)) return res.status(400).json({ success: false, message: 'Invalid ID' });
+	try {
+		const submission = await Article.findById(_id).exec();
+		if (!submission) return res.status(404).json({ success: false, message: 'Bản thảo không tồn tại' });
+
+		submission.detail.publishing?.request.push({
+			files,
+			text,
+			responseFile: undefined,
+		});
+		await submission.save();
+		const author = await User.findById(submission.authors.main._id).exec();
+		transporter.sendMail({
+			to: author?.email,
+			subject: `Hãy hoàn thiện bài báo nào!`,
+			html: `
+			<p>Bài báo của bạn đang cần hoàn thiện trong lúc này </p>
+			<p>Hãy hoàn thiện bài báo và <a href="${config.client.url}/author/article/${submission._id}">nộp lại</a> cho ban biên tập nào</p>`,
+		});
+		res.status(200).json({ success: true, message: `Đã yêu cầu tác giả hoàn thiện bài báo` });
+	} catch (error) {
+		logger.error(NAMESPACE, error);
+		res.status(500).json({ success: false, error });
+	}
+};
+
+const responseRevision = async (req: Request, res: Response) => {
+	const { _id, _revisionId } = req.params;
+	const { responseFile } = req.body;
+	if (!validObjectID(_id)) return res.status(400).json({ success: false, message: 'Invalid ID' });
+	try {
+		const submission = await Article.findById(_id).exec();
+		if (!submission) return res.status(404).json({ success: false, message: 'Bản thảo không tồn tại' });
+		const revisionIndex = submission.detail.publishing?.request.findIndex((r) => r._id === _revisionId);
+		if (revisionIndex === -1 && submission.detail.publishing?.request.at(revisionIndex) == undefined) return res.status(404).json({ success: false, message: 'Invalid ID' });
+		// const revision = `detail.publishing.request.${_revisionId}.responseFile`;
+
+		const result = await Article.updateOne(
+			{ _id: _id },
+			{
+				$set: {
+					'detail.publishing.request.$[requests].responseFile': responseFile,
+				},
+			},
+			{
+				arrayFilters: [
+					{
+						'requests._id': _revisionId,
+					},
+				],
+			},
+		).exec();
+		await submission.save();
+		const author = await User.findById(submission.authors.main._id).exec();
+		transporter.sendMail({
+			to: author?.email,
+			subject: `Cảm ơn bạn đã hoàn thiện bài báo!`,
+			html: `
+			<p>Bài báo hoàn thiện của bạn đang được ban biên tập xem xét </p>
+			<p>Hãy cùng chờ đợi xem bài báo của bạn có được xuất bản không nhé.</p>
+			<p>
+				<a href="${config.client.url}/author/article/${submission._id}">Chi tiết bài báo</a>
+			</p>`,
+		});
+		res.status(200).json({ success: true, message: `Nộp tài liệu hoàn thiện của bài báo thành công` });
+	} catch (error) {
+		logger.error(NAMESPACE, error);
+		res.status(500).json({ success: false, error });
+	}
+};
+
 const completeArticle = async (req: Request, res: Response) => {
 	const { _id } = req.params;
 	if (!validObjectID(_id)) return res.status(400).json({ success: false, message: 'Invalid ID' });
@@ -267,6 +382,17 @@ const completeArticle = async (req: Request, res: Response) => {
 		submission.publishedFile = req.body.publishedFile;
 		submission.publishedAt = new Date();
 		await submission.save();
+		const author = await User.findById(submission.authors.main._id).exec();
+		transporter.sendMail({
+			to: author?.email,
+			subject: `Bài báo đã xuất bản!`,
+			html: `
+			<p>Bài báo ${submission.title} của bạn đã được xuất bản rồi</p>
+			<p>Hãy xem bài báo của bạn có được nhiều người đón nhận không nhé. </p>
+			<p>
+				<a href="${config.client.url}/author/article/${submission._id}">Chi tiết bài báo</a>
+			</p>`,
+		});
 		res.status(200).json({ success: true, message: `Quá trình xuất bản bài báo hoàn tất!` });
 	} catch (error) {
 		logger.error(NAMESPACE, error);
@@ -304,6 +430,8 @@ export default {
 	publishingArticle,
 	completeArticle,
 	toggleVisibleArticle,
+	requestRevision,
+	responseRevision,
 };
 
 //TODO: tạo articleController

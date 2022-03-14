@@ -29,11 +29,11 @@ const ArticleSchema: Schema = new Schema(
 		 * publishing: Hoàn thiện bản thảo và đang xuất bản
 		 * published: Xuất bản
 		 */
-		status: { type: String, enum: ArticleStatus, required: true, default: 'submission' },
-		visible: { type: Boolean, default: false, required: true },
+		status: { type: String, enum: ArticleStatus, required: true, default: ArticleStatus.submission },
+		visible: { type: Boolean, default: true, required: true },
 		detail: {
 			reject: {
-				reason: { type: String, trim: true },
+				reason: { type: String, trim: true, default: '' },
 				notes: { type: String, trim: true },
 			},
 			submission: {
@@ -83,8 +83,8 @@ const ArticleSchema: Schema = new Schema(
 						],
 						reject: {
 							type: {
-								reason: { type: String, required: true },
-								notes: { type: String, required: false },
+								reason: { type: String, default: '' },
+								notes: { type: String, default: '' },
 							},
 							required: false,
 						},
@@ -95,10 +95,16 @@ const ArticleSchema: Schema = new Schema(
 			},
 			publishing: {
 				draftFile: [IFile],
+				request: [
+					{
+						text: { type: String, required: false },
+						files: [IFile],
+						responseFile: { type: IFile, required: false },
+					},
+				],
 			},
 		},
 		files: [IFile],
-		editor: Schema.Types.ObjectId,
 		reviewer: [Schema.Types.ObjectId],
 		publishedAt: { type: Date },
 		publishedFile: IFile,

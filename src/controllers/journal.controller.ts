@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
+import config from '../config/config';
 import logger from '../config/logger';
 import Article from '../models/article.model';
 import Journal from '../models/journal.model';
@@ -9,6 +10,7 @@ import { AttendedRole } from '../types';
 import { getAuthorizationHeaderToken, validObjectID, verifyAccessToken } from '../utils';
 import notiController from './notification.controller';
 
+const { transporter } = config.emailTransporter;
 const NAMESPACE = 'Journal Controller';
 
 const getAllJournals = async (req: Request, res: Response) => {
@@ -228,6 +230,18 @@ const articleSubmissions = async (req: Request, res: Response) => {
 		journal.articles.push(newSubmission._id);
 		try {
 			const [newSubmissionData, journalData, notiData] = await Promise.all([newSubmission.save(), journal.save(), notiController.newArticleSubmission(newSubmission)]);
+			const author = await User.findById(newSubmission.authors.main._id).exec();
+			transporter.sendMail({
+				to: author?.email,
+				subject: `Bài báo của bạn đã được nộp thành công!`,
+				html: `
+					<p>Cảm ơn bạn đã lựa chọn Tạp chí Khoa học Đại học Hạ Long làm nơi nộp bản thảo!</p>
+					<p>Bài báo ${newSubmission.title} của bạn đã nộp rồi.</p>
+					<p>Bài báo đã và đang được các biên tập viên xem xét.</p>
+					<p>
+						<a href="${config.client.url}/author/article/${newSubmission._id}">Chi tiết bài báo</a>
+					</p>`,
+			});
 			return res.status(201).json({ success: true, data: newSubmissionData });
 		} catch (error: any) {
 			logger.error(NAMESPACE, error);

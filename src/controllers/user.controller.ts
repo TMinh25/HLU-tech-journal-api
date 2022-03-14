@@ -225,7 +225,6 @@ const authInfo = async (req: Request, res: Response, next: NextFunction) => {
 		// const userInformation = userFound?.userInfomation();
 		if (!userFound) return res.status(404).json({ success: false, message: 'Không thể lấy dữ liệu từ phiên' });
 		if (userFound.disabled) return res.status(401).json({ success: false, data: null, message: 'Tài khoản của bạn đã bị vô hiệu hóa' });
-		logger.info(NAMESPACE, userFound);
 		return res.status(200).json({ success: true, data: userFound });
 	} catch (error) {
 		if (error === 'expired') {
@@ -515,6 +514,20 @@ const isValidResetPassword = async (req: Request, res: Response, next: NextFunct
 	}
 };
 
+const getAllReviewFields = async (req: Request, res: Response, next: NextFunction) => {
+	try {
+		console.log('review-fields');
+		const allUsers = await User.find().exec();
+		const allReviewFields = allUsers.map((u) => u.userSetting.forReviewer.reviewField).flat();
+		logger.info(NAMESPACE, allReviewFields);
+		const filterFields = Array.from(new Set(allReviewFields.map((r) => r.toLowerCase())));
+		return res.status(200).json({ success: true, data: filterFields.map((r) => r.charAt(0).toUpperCase() + r.slice(1)) });
+	} catch (error) {
+		logger.error(NAMESPACE, error);
+		return res.status(500).json({ success: false, message: 'Đã có lỗi xảy ra!' });
+	}
+};
+
 export default {
 	getAllUsers,
 	getUser,
@@ -530,4 +543,5 @@ export default {
 	requestResetPassword,
 	resetPassword,
 	isValidResetPassword,
+	getAllReviewFields,
 };

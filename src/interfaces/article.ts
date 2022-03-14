@@ -13,7 +13,6 @@ export default interface IArticle extends Document {
 		name: string;
 	};
 	abstract?: string;
-	editor: ObjectId;
 	authors: {
 		main: { _id: ObjectId; displayName: string; email: string; workPlace: string; backgroundInfomation: string; photoURL: string };
 		sub?: { displayName: string; email: string; workPlace?: string; backgroundInfomation?: string }[];
@@ -29,8 +28,8 @@ export default interface IArticle extends Document {
 	status: ArticleStatus;
 	visible: boolean;
 	detail: {
-		reject?: {
-			reason?: string;
+		reject: {
+			reason: string;
 			notes?: string;
 		};
 		submission?: {
@@ -77,8 +76,14 @@ export default interface IArticle extends Document {
 				};
 			},
 		];
-		publishing?: {
-			draftFile: IMongoFile[];
+		publishing: {
+			draftFile?: IMongoFile[];
+			request: {
+				_id?: string;
+				text: string;
+				files: IMongoFile[];
+				responseFile: IMongoFile | undefined;
+			}[];
 		};
 	};
 	files: IMongoFile[];
