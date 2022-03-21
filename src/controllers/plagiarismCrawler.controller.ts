@@ -22,51 +22,6 @@ const NAMESPACE = 'plagiarismCrawlerController';
 // 	});
 
 const crawlPlagium = async (req: Request, res: Response, next: NextFunction) => {
-	// return res.status(200).json({
-	// 	success: true,
-	// 	data: [
-	// 		{
-	// 			title: 'PDF]Preparation and property assessment of eco-friendly ...',
-	// 			url: 'https://tailieumienphi.vn/doc/preparation-and-property-assessment-of-eco-friendly-composite-based-on-polyvinyl-irfhuq.html',
-	// 			description:
-	// 				'Biodegradable composite films, based on polyvinyl alcohol (PVA) and lignin extracted from sugar bagasse, were fabricated with various weight ratios between two components. The composites show adequate characteristics contributed by PVA and lignin which have specific functional groups revealed by Infrared spectroscopy (FTIR).',
-	// 			similarityPercent: 98.8,
-	// 			similarityFound: 4,
-	// 		},
-	// 		{
-	// 			title: 'PREPARATION AND PROPERTY ASSESSMENT OF ECO-FRIENDLY COMPOSITE ...',
-	// 			url: 'http://jst.tnu.edu.vn/jst/article/download/3775/pdf',
-	// 			description:
-	// 				'weight ratios between two components. The composites show adequate characteristics contributed by PVA and lignin which have specific functional groups revealed by Infrared spectroscopy (FTIR). In addition, the composites possess outstanding characteristics including comparable optical and mechanical properties investigated',
-	// 			similarityPercent: 93.2,
-	// 			similarityFound: 3,
-	// 		},
-	// 		{
-	// 			title: 'PREPARATION AND PROPERTY ASSESSMENT OF ECO-FRIENDLY COMPOSITE ...',
-	// 			url: 'https://www.semanticscholar.org/paper/PREPARATION-AND-PROPERTY-ASSESSMENT-OF-ECO-FRIENDLY-Nguy%C3%AAn-Tr%E1%BB%B1/6ce36feb90c7e942c33e96dcf36e63a919f1f760',
-	// 			description:
-	// 				'Received: 12/11/2020 Biodegradable composite films, based on polyvinyl alcohol (PVA) and lignin extracted from sugar bagasse, were fabricated with various weight ratios between two components. The composites show adequate characteristics contributed by PVA and lignin which have specific functional groups revealed by Infrared spectroscopy (FTIR). In addition, the composites possess outstanding ...',
-	// 			similarityPercent: 55.4,
-	// 			similarityFound: 2,
-	// 		},
-	// 		{
-	// 			title: 'Preparation and property assessment of eco-friendly composite ...',
-	// 			url: 'https://tailieu.vn/doc/preparation-and-property-assessment-of-eco-friendly-composite-based-on-polyvinyl-alcohol-and-lignin--2405063.html',
-	// 			description:
-	// 				'Biodegradable composite films, based on polyvinyl alcohol (PVA) and lignin extracted from sugar bagasse, were fabricated with various weight ratios between two components. The composites show adequate characteristics contributed by PVA and lignin which have specific functional groups revealed by Infrared spectroscopy (FTIR). In addition, the composites possess outstanding characteristics ...',
-	// 			similarityPercent: 25.9,
-	// 			similarityFound: 1,
-	// 		},
-	// 		{
-	// 			title: 'PDF] EXTRACTION OF LIGNIN FROM SUGARCANE BAGASSE BY DEEP ...',
-	// 			url: 'https://www.semanticscholar.org/paper/EXTRACTION-OF-LIGNIN-FROM-SUGARCANE-BAGASSE-BY-DEEP-Nguyen-Tr%E1%BB%B1/b62f83a9869b570b2622ea781ddc90672ddabdf1',
-	// 			description:
-	// 				'Received: 12/11/2020 Biodegradable composite films, based on polyvinyl alcohol (PVA) and lignin extracted from sugar bagasse, were fabricated with various weight ratios between two components. The … Expand',
-	// 			similarityPercent: 15.4,
-	// 			similarityFound: 0,
-	// 		},
-	// 	],
-	// });
 
 	var text: string = req.body.text;
 

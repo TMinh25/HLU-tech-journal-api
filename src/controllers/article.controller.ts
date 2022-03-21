@@ -37,7 +37,7 @@ const getArticles = async (req: Request, res: Response) => {
 		const articles = await Promise.all(ids.map(async (id) => await Article.findById(id).exec()));
 		if (!user) return res.status(401).json({ success: false, message: 'Vui lòng đăng nhập' });
 		if (!articles || articles.length === 0) return res.status(404).json({ success: false, message: 'Bản thảo không tồn tại' });
-		// (nếu bản thảo chưa được hoàn thiện) và (tài khoản không phải editors của tạp chí) hoặc (tài khoản không phải tác giả)
+		// (nếu bản thảo chưa được hoàn thiện) và (tài khoản không phải editors của số) hoặc (tài khoản không phải tác giả)
 		return res.status(200).json({ success: true, data: articles });
 	} catch (error) {
 		logger.error(NAMESPACE, error);
@@ -54,7 +54,7 @@ const getArticle = async (req: Request, res: Response) => {
 		if (!user) return res.status(401).json({ success: false, message: 'Vui lòng đăng nhập' });
 		if (!article) return res.status(404).json({ success: false, message: 'Bản thảo không tồn tại' });
 		const journal = await Journal.findById(article?.journal._id).exec();
-		// (nếu bản thảo chưa được hoàn thiện) và (tài khoản không phải editors của tạp chí) hoặc (tài khoản không phải tác giả)
+		// (nếu bản thảo chưa được hoàn thiện) và (tài khoản không phải editors của số) hoặc (tài khoản không phải tác giả)
 		if (article.status !== ArticleStatus.completed && journal!.editors.includes({ _id: user._id, name: user.displayName }) && article.authors.main._id !== user._id) {
 			return res.status(401).json({ success: false, message: 'Bạn không có quyền xem bản thảo này' });
 		}

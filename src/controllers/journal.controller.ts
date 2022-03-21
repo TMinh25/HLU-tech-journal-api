@@ -19,7 +19,7 @@ const getAllJournals = async (req: Request, res: Response) => {
 		if (journalRes.length > 0) {
 			res.status(200).json({ success: true, data: journalRes, length: journalRes.length });
 		} else {
-			res.status(404).json({ success: false, data: null, error: { title: 'Không có tạp chí nào trong cơ sở dữ liệu' } });
+			res.status(404).json({ success: false, data: null, error: { title: 'Không có số nào trong cơ sở dữ liệu' } });
 		}
 	} catch (error: any) {
 		logger.error(NAMESPACE, error);
@@ -40,7 +40,7 @@ const getRecentlyPublishedJournal = async (req: Request, res: Response) => {
 			const recenylyPublishedJournals = journalRes[journalRes.length - 1];
 			res.status(200).json({ success: true, data: recenylyPublishedJournals });
 		} else {
-			return res.status(404).json({ success: false, data: null, message: 'Không có tạp chí nào mới được xuất bản' });
+			return res.status(404).json({ success: false, data: null, message: 'Không có số nào mới được xuất bản' });
 		}
 	} catch (error: any) {
 		logger.error(NAMESPACE, error);
@@ -60,7 +60,7 @@ const getAllPublishingJournal = async (req: Request, res: Response) => {
 		if (publishingJournals.length > 0) {
 			res.status(200).json({ success: true, data: publishingJournals, length: publishingJournals.length });
 		} else {
-			return res.status(404).json({ success: false, data: null, error: { title: 'Không có tạp chí nào đang xuất bản' } });
+			return res.status(404).json({ success: false, data: null, error: { title: 'Không có số nào đang xuất bản' } });
 		}
 	} catch (error: any) {
 		logger.error(NAMESPACE, error);
@@ -80,7 +80,7 @@ const getAllPublishedJournal = async (req: Request, res: Response) => {
 		if (publishedJournals.length > 0) {
 			res.status(200).json({ success: true, data: publishedJournals, length: publishedJournals.length });
 		} else {
-			return res.status(404).json({ success: false, data: null, error: { title: 'Không có tạp chí nào đang xuất bản' } });
+			return res.status(404).json({ success: false, data: null, error: { title: 'Không có số nào đang xuất bản' } });
 		}
 	} catch (error: any) {
 		logger.error(NAMESPACE, error);
@@ -146,7 +146,7 @@ const deleteJournal = async (req: Request, res: Response) => {
 		return res.status(400).json({ success: false, message: 'Invalid ID' });
 	}
 	if (!journal) {
-		return res.status(404).json({ success: false, message: 'Tạp chí không tồn tại' });
+		return res.status(404).json({ success: false, message: 'Số không tồn tại' });
 	} else {
 		try {
 			await journal.remove();
@@ -167,7 +167,7 @@ const getJournalById = async (req: Request, res: Response) => {
 		}
 		const journal = await Journal.findById(_id).exec();
 		if (!journal) {
-			return res.status(404).json({ success: false, message: 'Không tìm thấy tạp chí nào' });
+			return res.status(404).json({ success: false, message: 'Không tìm thấy số nào' });
 		} else {
 			return res.status(200).json({ success: true, data: journal });
 		}
@@ -187,7 +187,7 @@ const findJournals = async (req: Request, res: Response) => {
 			],
 		});
 		if (!journals) {
-			return res.status(404).json({ success: false, message: 'Không tìm thấy tạp chí nào', found: 0 });
+			return res.status(404).json({ success: false, message: 'Không tìm thấy số nào', found: 0 });
 		} else {
 			return res.status(200).json({ success: true, data: journals, found: journals.length });
 		}
@@ -207,7 +207,7 @@ const articleSubmissions = async (req: Request, res: Response) => {
 	try {
 		const journal = await Journal.findById(journalId).exec();
 		if (!journal) {
-			return res.status(404).json({ success: false, message: 'Tạp chí không tồn tại' });
+			return res.status(404).json({ success: false, message: 'Số không tồn tại' });
 		}
 		const user = await verifyAccessToken(accessToken);
 		delete articleInfo.status;
@@ -235,7 +235,7 @@ const articleSubmissions = async (req: Request, res: Response) => {
 				to: author?.email,
 				subject: `Bài báo của bạn đã được nộp thành công!`,
 				html: `
-					<p>Cảm ơn bạn đã lựa chọn Tạp chí Khoa học Đại học Hạ Long làm nơi nộp bản thảo!</p>
+					<p>Cảm ơn bạn đã lựa chọn Số Khoa học Đại học Hạ Long làm nơi nộp bản thảo!</p>
 					<p>Bài báo ${newSubmission.title} của bạn đã nộp rồi.</p>
 					<p>Bài báo đã và đang được các biên tập viên xem xét.</p>
 					<p>
@@ -281,7 +281,7 @@ const getAllArticlesOfJournal = async (req: Request, res: Response) => {
 	try {
 		const journal = await Journal.findById(_id);
 		if (!journal) {
-			return res.status(404).json({ success: false, message: 'Tạp chí không tồn tại' });
+			return res.status(404).json({ success: false, message: 'Số không tồn tại' });
 		}
 		// dùng Promise all để đợi tìm tất cả các article qua articles.map()
 		const articles = await Promise.all(

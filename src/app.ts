@@ -16,6 +16,7 @@ import { tokenAuthorization } from './middlewares/tokenAuthorization';
 import journalGroupRoutes from './routes/journalGroup.routes';
 import articleRoutes from './routes/article.routes';
 import { StreamChat } from 'stream-chat';
+import journalGroupController from './controllers/journalGroup.controller';
 
 const NAMESPACE = 'Server';
 const app = express();
@@ -25,6 +26,7 @@ export default mongoose
 	.connect(config.mongo.url, config.mongo.options)
 	.then((_) => {
 		logger.info(NAMESPACE, 'Connected to MongoDB');
+		journalGroupController.createDefaultJournalGroups();
 	})
 	.catch((error) => {
 		logger.error(NAMESPACE, 'Failed to connect to MongoDB', error);
@@ -59,14 +61,30 @@ try {
 	logger.error(NAMESPACE, 'logger error');
 }
 
+// app.use((req, res, next) => {
+// 	res.header('Access-Control-Allow-Origin', '*');
+// 	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+// 	res.header('Access-Control-Allow-Credentials', true);
+// 	res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH');
+// 	next();
+// });
+
 // Parse the request
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
-var corsOptions = {
-	origin: '*',
-	optionsSuccessStatus: 200,
-};
-app.use(cors(corsOptions));
+// var corsOptions = {
+// 	origin: '*',
+
+// 	optionsSuccessStatus: 200,
+// };
+app.use(
+	cors({
+		allowedHeaders: '*',
+		origin: '*',
+		optionsSuccessStatus: 200,
+		credentials: true,
+	}),
+);
 app.use(passport.initialize());
 
 // Routes

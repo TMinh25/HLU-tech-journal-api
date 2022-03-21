@@ -52,7 +52,7 @@ const ArticleSchema: Schema = new Schema(
 						 * - reviewing: Đang đánh giá bản thảo
 						 * - reviewSubmitted: Đã gửi đánh giá bản thảo
 						 * - completed: Hoàn tất đánh giá: Ban biên tập có thể gửi phản biện tiếp
-						 * hoặc yêu cầu tác giả hoàn thiện bản thảo để đưa vào xuất bản tạp chí
+						 * hoặc yêu cầu tác giả hoàn thiện bản thảo để đưa vào xuất bản số
 						 */
 						status: { type: String, enum: ReviewStatus, required: true, default: ReviewStatus.unassign },
 						importantDates: {

@@ -7,8 +7,11 @@ const JournalGroupSchema: Schema = new Schema(
 		name: { type: String, required: true, unique: true, trim: true },
 		tags: [{ type: String, required: true, trim: true }],
 		createBy: {
-			_id: { type: Schema.Types.ObjectId, required: true },
-			at: { type: Date, required: true },
+			type: {
+				_id: { type: Schema.Types.ObjectId, required: true },
+				at: { type: Date, required: true },
+			},
+			required: false,
 		},
 	},
 	{

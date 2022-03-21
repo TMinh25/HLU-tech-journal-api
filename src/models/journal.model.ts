@@ -3,7 +3,7 @@ import moment from 'moment';
 import mongooseUniqueValidator from 'mongoose-unique-validator';
 import IJournal from '../interfaces/journal';
 
-/**	Model `Journal`: tạp chí của cơ sở dữ liệu
+/**	Model `Journal`: số của cơ sở dữ liệu
  */
 const JournalSchema: Schema = new Schema(
 	{
@@ -12,7 +12,7 @@ const JournalSchema: Schema = new Schema(
 		tags: [{ type: String, trim: true }],
 		description: { type: String, trim: true, default: '' },
 		/**
-		 * Trạng thái của tạp chí:
+		 * Trạng thái của số:
 		 * true:  Đã xuất bản
 		 * false: Đang xuất bản
 		 */

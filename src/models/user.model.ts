@@ -66,7 +66,7 @@ const UserSchema: Schema = new Schema(
 		 * example = {
 		 * _id: "61610ed484d2094e34913045",
 		 * type: "magazine",
-		 * name: "Tạp chí khoa học công nghệ",
+		 * name: "Số khoa học công nghệ",
 		 * number: 12,
 		 * articleId: "61610ed484d2094e34913045",
 		 * status: "publishing",

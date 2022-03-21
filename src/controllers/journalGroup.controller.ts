@@ -6,6 +6,23 @@ import { getAuthorizationHeaderToken, verifyAccessToken, validObjectID } from '.
 
 const NAMESPACE = 'Journal Group Controller';
 
+const createDefaultJournalGroups = async () => {
+	try {
+		const [normal, special] = await Promise.all([JournalGroup.findOne({ name: 'SỐ THƯỜNG' }).exec(), JournalGroup.findOne({ name: 'SỐ ĐẶC BIỆT' }).exec()]);
+
+		if (!normal) {
+			const normalJournal = new JournalGroup({ name: 'SỐ THƯỜNG', tags: ['SỐ THƯỜNG'] });
+			normalJournal.save();
+		}
+		if (!special) {
+			const specialJournal = new JournalGroup({ name: 'SỐ ĐẶC BIỆT', tags: ['SỐ ĐẶC BIỆT'] });
+			specialJournal.save();
+		}
+	} catch (error) {
+		logger.error(NAMESPACE, error);
+	}
+};
+
 const getAllJournalGroups = async (req: Request, res: Response) => {
 	try {
 		const allJournals = await JournalGroup.find().exec();
@@ -94,7 +111,7 @@ const getAllJournalsInGroup = async (req: Request, res: Response) => {
 		if (journalRes.length > 0) {
 			res.status(200).json({ success: true, data: journalRes, length: journalRes.length });
 		} else {
-			res.status(404).json({ success: false, data: null, error: { title: 'Không có tạp chí nào trong cơ sở dữ liệu' } });
+			res.status(404).json({ success: false, data: null, error: { title: 'Không có số nào trong cơ sở dữ liệu' } });
 		}
 	} catch (error: any) {
 		logger.error(NAMESPACE, error);
@@ -108,4 +125,4 @@ const getAllJournalsInGroup = async (req: Request, res: Response) => {
 	}
 };
 
-export default { getAllJournalGroups, newJournalGroup, deleteJournalGroup, modifyJournalGroup, getAllJournalsInGroup };
+export default { getAllJournalGroups, newJournalGroup, deleteJournalGroup, modifyJournalGroup, getAllJournalsInGroup, createDefaultJournalGroups };

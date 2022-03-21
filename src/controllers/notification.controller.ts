@@ -82,12 +82,12 @@ const newArticleSubmission = async (submission: IArticle): Promise<INotification
 	new Promise(async (resolve, reject) => {
 		const journal = await Journal.findById(submission.journal._id).exec();
 		if (!journal) {
-			return reject('Tạp chí không tồn tại');
+			return reject('Số không tồn tại');
 		}
 		const link = '';
 		const notiForEditors: INotification = {
 			title: 'Một bản thảo mới vừa được nộp',
-			description: `Bản thảo mới ở tạp chí ${journal.name}, chuyên san ${journal.journalGroup.name}`,
+			description: `Bản thảo mới ở số ${journal.name}, chuyên san ${journal.journalGroup.name}`,
 			target: journal.editors.map((j) => j._id),
 			link: ``,
 		};
@@ -150,7 +150,7 @@ const reviewerAcceptSubmission = async (submission: IArticle, reviewer: IUser) =
 		const link = ``;
 		const journal = await Journal.findById(submission.journal._id).exec();
 		if (!journal) {
-			return reject('Tạp chí không tồn tại');
+			return reject('Số không tồn tại');
 		}
 		const notiForAuthor: INotification = {
 			title: 'Phản biện đã đồng ý!',
@@ -188,7 +188,7 @@ const reviewerRejectSubmission = async (submission: IArticle, reviewer: IUser) =
 		const link = ``;
 		const journal = await Journal.findById(submission.journal._id).exec();
 		if (!journal) {
-			return reject('Tạp chí không tồn tại');
+			return reject('Số không tồn tại');
 		}
 		const notiForAuthor: INotification = {
 			title: 'Phản biện không đồng ý!',
