@@ -4,7 +4,7 @@ import IMongoFile from './file';
 
 export default interface IArticle extends Document {
 	title: string;
-	journal: {
+	journal?: {
 		_id: ObjectId;
 		name: string;
 	};
@@ -84,6 +84,10 @@ export default interface IArticle extends Document {
 				files: IMongoFile[];
 				responseFile: IMongoFile | undefined;
 			}[];
+		};
+		copyediting: {
+			draftFiles: [IMongoFile];
+			copyEditedFile?: IMongoFile;
 		};
 	};
 	files: IMongoFile[];

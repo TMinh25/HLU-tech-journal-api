@@ -4,9 +4,8 @@ import logger from '../config/logger';
 import Article from '../models/article.model';
 import Journal from '../models/journal.model';
 import User from '../models/user.model';
-import { ArticleStatus, AttendedRole, ReviewStatus } from '../types';
+import { ArticleStatus, AttendedRole, ReviewStatus, Role } from '../types';
 import { getAuthorizationHeaderToken, validObjectID, verifyAccessToken } from '../utils';
-import notificationController from './notification.controller';
 import mongoose from 'mongoose';
 import { json } from 'body-parser';
 import config from '../config/config';
@@ -15,12 +14,9 @@ const NAMESPACE = 'Article Controller';
 const { transporter } = config.emailTransporter;
 
 const getAllArticles = async (req: Request, res: Response) => {
-	const accessToken = getAuthorizationHeaderToken(req);
 	try {
-		const user = await verifyAccessToken(accessToken);
-		const journals = await Journal.find({ 'editors._id': user._id }).exec();
-		const allArticlesIds = journals.map((j) => j.articles).flat();
-		const data = await Promise.all(allArticlesIds.map(async (a) => await Article.findById(a).exec()));
+		const journals = await Journal.find().exec();
+		const data = await Article.find().exec();
 		if (data.length == 0) return res.status(404).json({ success: true, data });
 		res.status(200).json({ success: true, data: data.filter((a) => Boolean(a)) });
 	} catch (error) {
@@ -53,9 +49,8 @@ const getArticle = async (req: Request, res: Response) => {
 		const article = await Article.findById(_id).exec();
 		if (!user) return res.status(401).json({ success: false, message: 'Vui lòng đăng nhập' });
 		if (!article) return res.status(404).json({ success: false, message: 'Bản thảo không tồn tại' });
-		const journal = await Journal.findById(article?.journal._id).exec();
-		// (nếu bản thảo chưa được hoàn thiện) và (tài khoản không phải editors của số) hoặc (tài khoản không phải tác giả)
-		if (article.status !== ArticleStatus.completed && journal!.editors.includes({ _id: user._id, name: user.displayName }) && article.authors.main._id !== user._id) {
+		// (nếu bản thảo chưa được hoàn thiện) và hoặc (tài khoản không phải tác giả)
+		if (article.status !== ArticleStatus.completed && article.authors.main._id !== user._id && user.role !== Role.admin && user.role !== Role.editors) {
 			return res.status(401).json({ success: false, message: 'Bạn không có quyền xem bản thảo này' });
 		}
 
@@ -291,6 +286,23 @@ const publishingArticle = async (req: Request, res: Response) => {
 		submission.detail.review.filter((r) => r.status === ReviewStatus.reviewing || r.status === ReviewStatus.request).forEach((r) => (r.status = ReviewStatus.unassigned));
 		console.log(submission.detail.review);
 		await submission.save();
+		res.status(200).json({ success: true, message: `Bản thảo chuyển sang bước biên tập!` });
+	} catch (error) {
+		logger.error(NAMESPACE, error);
+		res.status(500).json({ success: false, error });
+	}
+};
+
+const copyEditingArticle = async (req: Request, res: Response) => {
+	const { _id } = req.params;
+	if (!validObjectID(_id)) return res.status(400).json({ success: false, message: 'Invalid ID' });
+	try {
+		const submission = await Article.findById(_id).exec();
+		if (!submission) return res.status(404).json({ success: false, message: 'Bản thảo không tồn tại' });
+		submission.status = ArticleStatus.copyediting;
+		submission.detail.copyediting = req.body;
+		console.log(submission.detail.review);
+		await submission.save();
 		res.status(200).json({ success: true, message: `Bản thảo chuyển sang bước xuất bản!` });
 	} catch (error) {
 		logger.error(NAMESPACE, error);
@@ -428,6 +440,7 @@ export default {
 	getArticlesForAuthor,
 	confirmedSubmittedResult,
 	publishingArticle,
+	copyEditingArticle,
 	completeArticle,
 	toggleVisibleArticle,
 	requestRevision,

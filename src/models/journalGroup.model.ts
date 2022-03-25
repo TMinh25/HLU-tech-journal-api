@@ -13,6 +13,11 @@ const JournalGroupSchema: Schema = new Schema(
 			},
 			required: false,
 		},
+		submissions: {
+			type: [Schema.Types.ObjectId],
+			required: true,
+			default: [],
+		},
 	},
 	{
 		_id: true,

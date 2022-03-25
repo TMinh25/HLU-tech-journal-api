@@ -12,7 +12,6 @@ journalRoutes.delete('/delete/:_id', controller.deleteJournal);
 journalRoutes.post('/find', controller.findJournals);
 journalRoutes.get('/:_id', controller.getJournalById);
 
-journalRoutes.post('/:_id/submission', controller.articleSubmissions);
 journalRoutes.get('/:_id/articles', controller.getAllArticlesOfJournal);
 
 export = journalRoutes;

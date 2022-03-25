@@ -1,14 +1,16 @@
 export enum Role {
 	admin = 1,
 	editors = 2,
-	reviewers = 3,
-	users = 4,
+	copyeditors = 3,
+	reviewers = 4,
+	users = 5,
 }
 
 export enum ArticleStatus {
 	reject = 'reject',
 	submission = 'submission',
 	review = 'review',
+	copyediting = 'copyediting',
 	publishing = 'publishing',
 	completed = 'completed',
 }

@@ -14,7 +14,7 @@ const IFile = {
 const ArticleSchema: Schema = new Schema(
 	{
 		title: { type: String, required: true, trim: true, unique: true, uppercase: true },
-		journal: { _id: { type: Schema.Types.ObjectId, required: true }, name: { type: String, required: true } },
+		journal: { type: { _id: { type: Schema.Types.ObjectId, required: true }, name: { type: String, required: true } }, required: false },
 		journalGroup: { _id: { type: Schema.Types.ObjectId, required: true }, name: { type: String, required: true } },
 		abstract: { type: String, required: false, unique: true },
 		tags: [String],
@@ -102,6 +102,10 @@ const ArticleSchema: Schema = new Schema(
 						responseFile: { type: IFile, required: false },
 					},
 				],
+			},
+			copyediting: {
+				draftFiles: { type: IFile, required: true, default: [] },
+				copyEditedFile: { type: IFile, required: false, default: null },
 			},
 		},
 		files: [IFile],

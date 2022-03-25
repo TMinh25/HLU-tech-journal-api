@@ -15,6 +15,7 @@ articleRoutes.post('/:_id/submission/:_roundId/review/unassign', controller.unas
 articleRoutes.post('/:_id/submission/:_roundId/review/result', controller.reviewerSubmitResult);
 articleRoutes.post('/:_id/submission/:_roundId/review/confirm', controller.confirmedSubmittedResult);
 articleRoutes.post('/:_id/submission/publishing', controller.publishingArticle);
+articleRoutes.post('/:_id/submission/copyediting', controller.copyEditingArticle);
 articleRoutes.post('/:_id/submission/completed', controller.completeArticle);
 articleRoutes.post('/:_id/revision/request', controller.requestRevision);
 articleRoutes.post('/:_id/revision/response/:_revisionId', controller.responseRevision);

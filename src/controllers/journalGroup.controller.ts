@@ -1,10 +1,14 @@
 import { Request, Response } from 'express';
+import config from '../config/config';
 import logger from '../config/logger';
+import Article from '../models/article.model';
 import Journal from '../models/journal.model';
 import JournalGroup from '../models/journalGroup.model';
+import User from '../models/user.model';
 import { getAuthorizationHeaderToken, verifyAccessToken, validObjectID } from '../utils';
 
 const NAMESPACE = 'Journal Group Controller';
+const { transporter } = config.emailTransporter;
 
 const createDefaultJournalGroups = async () => {
 	try {
@@ -125,4 +129,77 @@ const getAllJournalsInGroup = async (req: Request, res: Response) => {
 	}
 };
 
-export default { getAllJournalGroups, newJournalGroup, deleteJournalGroup, modifyJournalGroup, getAllJournalsInGroup, createDefaultJournalGroups };
+const articleSubmissions = async (req: Request, res: Response) => {
+	const accessToken = getAuthorizationHeaderToken(req);
+	const articleInfo = req.body;
+	const { _id } = req.params;
+	try {
+		const user = await verifyAccessToken(accessToken);
+		const journalGroup = await JournalGroup.findById(_id).exec();
+		if (!journalGroup) return res.status(404).json({ success: false, message: 'Chuyên san không tồn tại' });
+		delete articleInfo.status;
+		delete articleInfo.files;
+		delete articleInfo.reviewer;
+		const newSubmission = new Article(articleInfo);
+		newSubmission.authors.main = {
+			_id: user._id,
+			displayName: user.displayName,
+			email: user.email,
+			workPlace: user.workPlace,
+			backgroundInfomation: user.backgroundInfomation,
+			photoURL: user.photoURL,
+		};
+		newSubmission.journalGroup = { _id: journalGroup._id, name: journalGroup.name };
+		newSubmission.files?.push(articleInfo.detail.submission.file);
+		newSubmission.files?.push(...articleInfo.detail.submission.helperFiles);
+		newSubmission.currentFile = articleInfo.detail.submission.file;
+		journalGroup.submissions.push(newSubmission._id);
+		try {
+			const [newSubmissionData, journalGroupData] = await Promise.all([newSubmission.save(), journalGroup.save()]);
+			const author = await User.findById(newSubmission.authors.main._id).exec();
+			transporter.sendMail({
+				to: author?.email,
+				subject: `Bài báo của bạn đã được nộp thành công!`,
+				html: `
+					<p>Cảm ơn bạn đã lựa chọn Số Khoa học Đại học Hạ Long làm nơi nộp bản thảo!</p>
+					<p>Bài báo ${newSubmission.title} của bạn đã nộp rồi.</p>
+					<p>Bài báo đã và đang được các biên tập viên xem xét.</p>
+					<p>
+						<a href="${config.client.url}/author/article/${newSubmission._id}">Chi tiết bài báo</a>
+					</p>`,
+			});
+			return res.status(201).json({ success: true, data: newSubmissionData });
+		} catch (error: any) {
+			logger.error(NAMESPACE, error);
+			if (error.name === 'ValidationError') {
+				if (error.kind === 'unique') {
+					return res.status(400).json({
+						success: false,
+						message: 'Thông tin trùng lặp trong cơ sở dữ liệu',
+						code: 'uniqueValidator',
+						error: Object.fromEntries(Object.entries(error.errors).map(([k, v]) => [k, true])),
+					});
+				} else if (error.kind === 'required') {
+					return res.status(400).json({
+						success: false,
+						message: 'Thông tin cần nhập bị thiếu',
+						code: 'requiredValidator',
+						error: Object.fromEntries(Object.entries(error.errors).map(([k, v]) => [k, true])),
+					});
+				}
+			}
+			return res.status(500).json({ success: false, error });
+		}
+	} catch (error) {
+		if (error === 'expired') {
+			return res.status(401).json({ success: false, error: { title: 'Phiên hết hạn', description: 'Hãy đăng nhập lại' } });
+		} else if (error === 'notfound') {
+			return res.status(404).json({ success: false, error: { title: 'Không thể tìm thấy người dùng' } });
+		} else {
+			logger.error(NAMESPACE, error);
+			return res.status(500);
+		}
+	}
+};
+
+export default { getAllJournalGroups, newJournalGroup, deleteJournalGroup, modifyJournalGroup, getAllJournalsInGroup, createDefaultJournalGroups, articleSubmissions };
