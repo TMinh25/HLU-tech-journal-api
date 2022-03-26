@@ -9,6 +9,7 @@ import { getAuthorizationHeaderToken, validObjectID, verifyAccessToken } from '.
 import mongoose from 'mongoose';
 import { json } from 'body-parser';
 import config from '../config/config';
+import IMongoFile from '../interfaces/file';
 
 const NAMESPACE = 'Article Controller';
 const { transporter } = config.emailTransporter;
@@ -50,7 +51,7 @@ const getArticle = async (req: Request, res: Response) => {
 		if (!user) return res.status(401).json({ success: false, message: 'Vui lòng đăng nhập' });
 		if (!article) return res.status(404).json({ success: false, message: 'Bản thảo không tồn tại' });
 		// (nếu bản thảo chưa được hoàn thiện) và hoặc (tài khoản không phải tác giả)
-		if (article.status !== ArticleStatus.completed && article.authors.main._id !== user._id && user.role !== Role.admin && user.role !== Role.editors) {
+		if (article.status !== ArticleStatus.completed && article.authors.main._id !== user._id && user.role !== Role.admin && user.role !== Role.editors && user.role !== Role.copyeditors) {
 			return res.status(401).json({ success: false, message: 'Bạn không có quyền xem bản thảo này' });
 		}
 
@@ -67,6 +68,19 @@ const getArticlesForReviewer = async (req: Request, res: Response) => {
 		const user = await verifyAccessToken(accessToken);
 		const data = await Article.find({ 'detail.review.reviewer': user._id }).exec();
 		if (data.length == 0) return res.status(404).json({ success: true, data: data });
+		res.status(200).json({ success: true, data: data });
+	} catch (error) {
+		logger.error(NAMESPACE, error);
+		res.status(500).json({ success: false, error });
+	}
+};
+
+const getArticlesForCopyeditor = async (req: Request, res: Response) => {
+	const accessToken = getAuthorizationHeaderToken(req);
+	try {
+		const user = await verifyAccessToken(accessToken);
+		const data = await Article.find({ 'detail.copyediting.copyeditor': user._id }).exec();
+		if (data.length == 0) return res.status(404).json({ success: true, data });
 		res.status(200).json({ success: true, data: data });
 	} catch (error) {
 		logger.error(NAMESPACE, error);
@@ -310,6 +324,22 @@ const copyEditingArticle = async (req: Request, res: Response) => {
 	}
 };
 
+const responseCopyEditingArticle = async (req: Request, res: Response) => {
+	const { _id } = req.params;
+	if (!validObjectID(_id)) return res.status(400).json({ success: false, message: 'Invalid ID' });
+	try {
+		const submission = await Article.findById(_id).exec();
+		if (!submission) return res.status(404).json({ success: false, message: 'Bản thảo không tồn tại' });
+		submission.detail.copyediting.copyEditedFile = req.body as IMongoFile;
+		console.log(submission.detail.review);
+		await submission.save();
+		res.status(200).json({ success: true, message: `Toàn văn đã biên tập của bạn đã được gửi lên hệ thống` });
+	} catch (error) {
+		logger.error(NAMESPACE, error);
+		res.status(500).json({ success: false, error });
+	}
+};
+
 const requestRevision = async (req: Request, res: Response) => {
 	const { _id } = req.params;
 	const { text, files } = req.body;
@@ -437,8 +467,10 @@ export default {
 	submissionResponse,
 	reviewerSubmitResult,
 	getArticlesForReviewer,
+	getArticlesForCopyeditor,
 	getArticlesForAuthor,
 	confirmedSubmittedResult,
+	responseCopyEditingArticle,
 	publishingArticle,
 	copyEditingArticle,
 	completeArticle,

@@ -1,5 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
-import INotificationGroup from '../interfaces/notification';
+import INotification from '../interfaces/notification';
 import { Role } from '../types';
 
 const INoti = {
@@ -10,11 +10,7 @@ const INoti = {
 };
 
 const NotificationGroupSchema: Schema = new Schema(
-	{
-		noti: [INoti],
-		// target: { type: Object, required: true },
-		visible: { type: Boolean, required: true, default: true },
-	},
+	{ title: { type: String, required: true }, content: { type: String, required: false, default: '' } },
 	{
 		_id: true,
 		timestamps: true,
@@ -26,5 +22,5 @@ const NotificationGroupSchema: Schema = new Schema(
 	},
 );
 
-const NotificationGroup = mongoose.model<INotificationGroup>('Notifications', NotificationGroupSchema);
-export default NotificationGroup;
+const Notification = mongoose.model<INotification>('Notifications', NotificationGroupSchema);
+export default Notification;

@@ -86,7 +86,9 @@ export default interface IArticle extends Document {
 			}[];
 		};
 		copyediting: {
-			draftFiles: [IMongoFile];
+			draftFiles: IMongoFile;
+			notes?: string;
+			copyeditor?: ObjectId;
 			copyEditedFile?: IMongoFile;
 		};
 	};

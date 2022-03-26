@@ -1,16 +1,8 @@
 import { ObjectId } from 'mongoose';
 import { Role } from '../types';
 
-export interface INotification {
-	target?: ObjectId[];
-	role?: Role;
+export default interface INotification {
 	title: string;
-	description?: string;
+	content?: string;
 	link?: string;
-}
-
-export default interface INotificationGroup {
-	noti: INotification[];
-	// target: object[];
-	visible?: boolean;
 }

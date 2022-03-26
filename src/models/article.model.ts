@@ -104,7 +104,9 @@ const ArticleSchema: Schema = new Schema(
 				],
 			},
 			copyediting: {
-				draftFiles: { type: IFile, required: true, default: [] },
+				copyeditor: { type: Schema.Types.ObjectId, ref: 'User', required: false, default: null, trim: true },
+				notes: { type: String, required: false, default: '' },
+				draftFiles: { type: IFile, required: true },
 				copyEditedFile: { type: IFile, required: false, default: null },
 			},
 		},

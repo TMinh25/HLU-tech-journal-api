@@ -1,8 +1,8 @@
-import puppeteer, { ElementHandle, WaitForSelectorOptions } from 'puppeteer';
-import { NextFunction, Request, Response } from 'express';
-import PlagiarismModel from '../interfaces/plagiarism';
-import { removeBreadScrumbs, cleanDescription as cleanString } from '../utils';
+import { Request, Response } from 'express';
+import puppeteer from 'puppeteer';
 import logger from '../config/logger';
+import PlagiarismModel from '../interfaces/plagiarism';
+import { cleanDescription as cleanString, removeBreadScrumbs } from '../utils';
 
 const NAMESPACE = 'plagiarismCrawlerController';
 
@@ -21,8 +21,7 @@ const NAMESPACE = 'plagiarismCrawlerController';
 // 		};
 // 	});
 
-const crawlPlagium = async (req: Request, res: Response, next: NextFunction) => {
-
+const crawlPlagium = async (req: Request, res: Response) => {
 	var text: string = req.body.text;
 
 	text = cleanString(text);
@@ -34,7 +33,7 @@ const crawlPlagium = async (req: Request, res: Response, next: NextFunction) => 
 	}
 	try {
 		// Tạo trang mới trong tab ẩn danh
-		const browser = await puppeteer.launch({ headless: false });
+		const browser = await puppeteer.launch({ headless: true });
 		const incognitoContext = await browser.createIncognitoBrowserContext();
 		const page = await incognitoContext.newPage();
 		await page.goto('https://www.plagium.com/');
@@ -48,6 +47,14 @@ const crawlPlagium = async (req: Request, res: Response, next: NextFunction) => 
 			return res.status(404).json({ success: true, data: null, message: 'Did not find any documents making use of the text', message_vn: 'Không tìm thấy tài liệu nào sử dụng đoạn văn bản' });
 		try {
 			// Đợi đến khi các kết quả hiện ra, thời gian timeout là 3 phút
+			try {
+				page.waitForSelector('div#message', { visible: true }).then(() => {
+					return res.status(404).json({ success: true, message: 'Không tìm thấy tài liệu nào sử dụng đoạn văn bản' });
+				});
+			} catch (error) {
+				logger.error(NAMESPACE, error);
+			}
+
 			await page.waitForSelector('.result', {
 				timeout: 180000,
 				visible: true,
@@ -77,10 +84,11 @@ const crawlPlagium = async (req: Request, res: Response, next: NextFunction) => 
 					});
 				},
 			);
-
+			// Đóng trình duyệt
+			browser.close();
 			if (data.length == 0) {
 				// Không có bản đạo văn nào
-				res.status(404).json({
+				return res.status(404).json({
 					success: true,
 					message: 'Không tìm thấy tài liệu nào sử dụng đoạn văn bản',
 				});
@@ -94,14 +102,11 @@ const crawlPlagium = async (req: Request, res: Response, next: NextFunction) => 
 					};
 				}) as Array<PlagiarismModel>;
 				// Trả về kết quả của các bản đạo văn
-				res.status(200).json({
+				return res.status(200).json({
 					success: true,
 					data: finalData,
 				});
 			}
-			// Đóng trình duyệt
-			browser.close();
-			return;
 		} catch (error) {
 			return res.status(500).json({ success: false, message: 'Quá thời gian chờ 3 phút' });
 		}

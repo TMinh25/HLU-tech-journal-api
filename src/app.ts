@@ -17,6 +17,7 @@ import journalGroupRoutes from './routes/journalGroup.routes';
 import articleRoutes from './routes/article.routes';
 import { StreamChat } from 'stream-chat';
 import journalGroupController from './controllers/journalGroup.controller';
+import notificationRoutes from './routes/notification.routes';
 
 const NAMESPACE = 'Server';
 const app = express();
@@ -86,16 +87,18 @@ app.use(
 	}),
 );
 app.use(passport.initialize());
+app.use(mongoDbInitValidation);
 
 // Routes
-app.use('/user', tokenAuthorization, mongoDbInitValidation, userRoutes);
-app.use('/auth', mongoDbInitValidation, authRoutes);
+app.use('/user', tokenAuthorization, userRoutes);
+app.use('/auth', authRoutes);
+app.use('/notification', notificationRoutes);
 // app.use('/covid', tokenAuthorization, covidCrawlerRoutes);
 app.use('/plagiarism', tokenAuthorization, plagiarismRoutes);
-app.use('/file', mongoDbInitValidation, fileStorageRoutes);
-app.use('/article', mongoDbInitValidation, articleRoutes);
-app.use('/journal', mongoDbInitValidation, journalRoutes);
-app.use('/journal-group', mongoDbInitValidation, journalGroupRoutes);
+app.use('/file', fileStorageRoutes);
+app.use('/article', articleRoutes);
+app.use('/journal', journalRoutes);
+app.use('/journal-group', journalGroupRoutes);
 
 // Rules of API
 app.use((req, res, next) => {
