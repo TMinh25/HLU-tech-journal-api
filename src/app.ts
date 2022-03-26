@@ -83,7 +83,7 @@ app.use(
 		allowedHeaders: '*',
 		origin: '*',
 		optionsSuccessStatus: 200,
-		credentials: true,
+		// credentials: true,
 	}),
 );
 app.use(passport.initialize());
