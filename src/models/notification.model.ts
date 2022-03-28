@@ -1,16 +1,11 @@
 import mongoose, { Schema } from 'mongoose';
 import INotification from '../interfaces/notification';
-import { Role } from '../types';
-
-const INoti = {
-	target: [String],
-	title: String,
-	description: String,
-	link: String,
-};
 
 const NotificationGroupSchema: Schema = new Schema(
-	{ title: { type: String, required: true }, content: { type: String, required: false, default: '' } },
+	{
+		title: { type: String, required: true },
+		content: { type: String, required: false, default: '' },
+	},
 	{
 		_id: true,
 		timestamps: true,

@@ -17,20 +17,6 @@ const JournalSchema: Schema = new Schema(
 		 * false: Đang xuất bản
 		 */
 		status: { type: Boolean, required: true, default: false },
-		editors: [
-			{
-				_id: { type: Schema.Types.ObjectId, required: true },
-				name: { type: String, trim: true, required: true },
-				photoURL: { type: String, trim: true, required: false },
-			},
-		],
-		contributors: [
-			{
-				_id: { type: Schema.Types.ObjectId, required: true },
-				name: { type: String, required: true },
-				contributes: { type: String },
-			},
-		],
 		createdBy: {
 			_id: { type: Schema.Types.ObjectId },
 			displayName: { type: String },

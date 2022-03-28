@@ -73,19 +73,13 @@ try {
 // Parse the request
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
-// var corsOptions = {
-// 	origin: '*',
-
-// 	optionsSuccessStatus: 200,
-// };
-app.use(
-	cors({
-		allowedHeaders: '*',
-		origin: '*',
-		optionsSuccessStatus: 200,
-		credentials: true,
-	}),
-);
+var corsOptions = {
+	allowedHeaders: '*',
+	origin: '*',
+	optionsSuccessStatus: 200,
+	credentials: true,
+};
+app.use(cors());
 app.use(passport.initialize());
 app.use(mongoDbInitValidation);
 
