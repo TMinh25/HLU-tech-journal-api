@@ -4,7 +4,11 @@ import { ArticleStatus, AttendedRole, Role } from '../types';
 export default interface IUser extends Document {
 	displayName: string;
 	streamToken: string;
+<<<<<<< HEAD
 	aliases?: string;
+=======
+	aliases: string;
+>>>>>>> 16eedce1583ec36342d1a451c62c837b84cb195f
 	sex: number;
 	role: Role;
 	degree: string;
