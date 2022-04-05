@@ -79,7 +79,11 @@ var corsOptions = {
 	optionsSuccessStatus: 200,
 	credentials: true,
 };
-app.use(cors());
+app.use(
+	cors({
+		allowedHeaders: 'https://hlu-tech-journal.pages.dev/',
+	}),
+);
 
 app.use(passport.initialize());
 app.use(mongoDbInitValidation);

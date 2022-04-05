@@ -47,14 +47,13 @@ const getArticle = async (req: Request, res: Response) => {
 	const accessToken = getAuthorizationHeaderToken(req);
 	try {
 		const user = await verifyAccessToken(accessToken);
-		const article = await Article.findById(_id).exec();
+		const article = await Article.findById(_id).lean().exec();
 		if (!user) return res.status(401).json({ success: false, message: 'Vui lòng đăng nhập' });
 		if (!article) return res.status(404).json({ success: false, message: 'Bản thảo không tồn tại' });
 		// (nếu bản thảo chưa được hoàn thiện) và hoặc (tài khoản không phải tác giả)
-		if (article.status !== ArticleStatus.completed && article.authors.main._id !== user._id && user.role !== Role.admin && user.role !== Role.editors && user.role !== Role.copyeditors) {
+		if (article.authors.main._id.toString() !== user._id.toString()) {
 			return res.status(401).json({ success: false, message: 'Bạn không có quyền xem bản thảo này' });
 		}
-
 		return res.status(200).json({ success: true, data: article });
 	} catch (error) {
 		logger.error(NAMESPACE, error);

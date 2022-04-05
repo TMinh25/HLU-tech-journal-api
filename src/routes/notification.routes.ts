@@ -3,7 +3,8 @@ import controller from '../controllers/notification.controller';
 
 const notificationRoutes = express.Router();
 
-notificationRoutes.get('/', controller.getAllNotifications);
 notificationRoutes.post('/new', controller.newNotification);
+notificationRoutes.get('/', controller.getAllNotifications);
+notificationRoutes.get('/:_id', controller.getNotification);
 
 export = notificationRoutes;

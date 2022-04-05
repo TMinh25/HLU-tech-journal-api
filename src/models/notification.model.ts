@@ -5,6 +5,7 @@ const NotificationGroupSchema: Schema = new Schema(
 	{
 		title: { type: String, required: true },
 		content: { type: String, required: false, default: '' },
+		detail: { type: String, required: true, default: '' },
 	},
 	{
 		_id: true,
