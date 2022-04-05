@@ -81,7 +81,9 @@ var corsOptions = {
 };
 app.use(
 	cors({
-		allowedHeaders: 'https://hlu-tech-journal.pages.dev/',
+		allowedHeaders: config.client.url,
+		origin: config.client.url,
+		methods: ['GET', 'POST', 'PATCH', 'DELETE'],
 	}),
 );
 
