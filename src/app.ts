@@ -81,8 +81,8 @@ var corsOptions = {
 };
 app.use(
 	cors({
-		allowedHeaders: config.client.url,
-		origin: config.client.url,
+		allowedHeaders: '*',
+		origin: '*',
 		methods: ['GET', 'POST', 'PATCH', 'DELETE'],
 	}),
 );
