@@ -51,10 +51,11 @@ const getArticle = async (req: Request, res: Response) => {
 		if (!user) return res.status(401).json({ success: false, message: 'Vui lòng đăng nhập' });
 		if (!article) return res.status(404).json({ success: false, message: 'Bản thảo không tồn tại' });
 		// (nếu bản thảo chưa được hoàn thiện) và hoặc (tài khoản không phải tác giả)
-		if (article.authors.main._id.toString() !== user._id.toString()) {
+		if (article.authors.main._id.toString() == user._id.toString() || user.role == Role.admin || user.role == Role.editors || user.role == Role.copyeditors || user.role == Role.reviewers) {
+			return res.status(200).json({ success: true, data: article });
+		} else {
 			return res.status(401).json({ success: false, message: 'Bạn không có quyền xem bản thảo này' });
 		}
-		return res.status(200).json({ success: true, data: article });
 	} catch (error) {
 		logger.error(NAMESPACE, error);
 		res.status(500).json({ success: false, error });

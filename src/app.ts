@@ -76,16 +76,9 @@ app.use(express.json());
 var corsOptions = {
 	allowedHeaders: '*',
 	origin: '*',
-	optionsSuccessStatus: 200,
-	credentials: true,
+	methods: ['GET', 'POST', 'PATCH', 'DELETE'],
 };
-app.use(
-	cors({
-		allowedHeaders: '*',
-		origin: '*',
-		methods: ['GET', 'POST', 'PATCH', 'DELETE'],
-	}),
-);
+app.use(cors(corsOptions));
 
 app.use(passport.initialize());
 app.use(mongoDbInitValidation);
