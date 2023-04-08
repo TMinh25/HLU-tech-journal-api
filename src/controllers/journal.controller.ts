@@ -157,7 +157,18 @@ const deleteJournal = async (req: Request, res: Response) => {
 	}
 };
 
-// TODO: chỉnh sửa thông tin Journal
+const modifyJournalById = async (req: Request, res: Response) => {
+	const { _id } = req.params;
+	const { name, tags, description, status } = req.body;
+	try {
+		if (!validObjectID(_id)) {
+			return res.status(400).json({ success: false, message: 'Invalid id 3' });
+		}
+		const journal = await Journal.findById(_id).exec();
+		journal.
+	} catch (error) {}
+};
+
 const getJournalById = async (req: Request, res: Response) => {
 	const { _id } = req.params;
 	try {

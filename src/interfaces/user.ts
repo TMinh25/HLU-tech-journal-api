@@ -20,9 +20,17 @@ export default interface IUser extends Document {
 	userSetting: {
 		theme: 'dark';
 		language: 'vietnam';
+		billingInfo: {
+			bank: string;
+			number: string;
+			name: string;
+		}[];
 		forReviewer: {
 			acceptingReview: false;
 			reviewField: string[];
+			specialized: string[];
+			citizenIdentification: string;
+			phone: string;
 		};
 		forReader: {
 			acceptingEmail: true;

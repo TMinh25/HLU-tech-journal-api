@@ -1,22 +1,16 @@
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { NextFunction, Request, Response } from 'express';
-import fs from 'fs';
-import jwt, { TokenExpiredError } from 'jsonwebtoken';
-import mongoose, { Schema } from 'mongoose';
+import jwt from 'jsonwebtoken';
+import { getStreamInstance } from '../app';
 import config from '../config/config';
 import logger from '../config/logger';
 import IUser from '../interfaces/user';
 import AccountVerification from '../models/accountVerification.model';
-import Article from '../models/article.model';
-import Journal from '../models/journal.model';
 import RefreshToken from '../models/refreshToken.model';
 import ResetPasswordRequest from '../models/resetPasswordRequest.model';
 import User from '../models/user.model';
-import { Role } from '../types';
 import { getAuthorizationHeaderToken, validObjectID, verifyAccessToken } from '../utils';
-import { StreamChat } from 'stream-chat';
-import { getStreamInstance } from '../app';
 
 const NAMESPACE = 'User Controller';
 
@@ -115,7 +109,7 @@ const findUsers = (req: Request, res: Response, next: NextFunction) => {
 		});
 };
 
-// TODO: vô hiệu hóa người dùng bằng _id
+// vô hiệu hóa người dùng bằng _id
 // lấy _id của accessToken đặt làm người vô hiệu hóa
 // nếu role !== Role.admin thì không thể vô hiệu hóa
 const toggleDisableUser = async (req: Request, res: Response, next: NextFunction) => {

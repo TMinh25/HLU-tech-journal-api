@@ -51,9 +51,13 @@ const UserSchema: Schema = new Schema(
 			default: {
 				theme: 'dark',
 				language: 'vietnam',
+				billingInfo: [],
 				forReviewer: {
 					acceptingReview: false,
 					reviewField: [],
+					specialized: [],
+					citizenIdentification: undefined,
+					phone: undefined,
 				},
 				forReader: {
 					acceptingEmail: true,

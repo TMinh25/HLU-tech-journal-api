@@ -3,7 +3,8 @@ export enum Role {
 	editors = 2,
 	copyeditors = 3,
 	reviewers = 4,
-	users = 5,
+	councils = 5,
+	users = 6,
 }
 
 export enum ArticleStatus {

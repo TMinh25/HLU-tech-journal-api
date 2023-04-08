@@ -39,7 +39,11 @@ if (config.enviroment === 'development') {
 }
 
 /** GetStream server instance */
-export const getStreamInstance = StreamChat.getInstance(config.streamChat.key, config.streamChat.secret);
+// export const getStreamInstance =  StreamChat.getInstance(config.streamChat.key, config.streamChat.secret);
+export const getStreamInstance = new StreamChat(config.streamChat.key, config.streamChat.secret);
+if (!getStreamInstance.secret) {
+	getStreamInstance.secret = config.streamChat.secret;
+}
 
 // Logging the request
 try {
